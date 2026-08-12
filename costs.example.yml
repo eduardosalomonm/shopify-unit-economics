@@ -1,0 +1,96 @@
+# Cost model and catalogue — EXAMPLE FILE with invented figures.
+#
+# Copy to `costs.yml` and fill in your own numbers. `costs.yml` is gitignored:
+# unit costs and supplier pricing are commercially sensitive and never belong in
+# a public repo.
+#
+# Rule: every figure carries a source and a confirmation date. A number nobody
+# can trace is a number nobody should trust.
+
+meta:
+  marca: Demo Store
+  dominio: demo-store.example
+  moneda: EUR
+  actualizado: 2026-01-01
+  nota_costes: >
+    Landed unit cost: manufacturing plus known import charges. Excludes import VAT
+    and customs at origin. Not a final tax-ready cost.
+
+iva:
+  tipo_pct: 21.0
+  precios_incluyen_iva: true
+  nota: >
+    Storefront prices include VAT (taxesIncluded on orders). Margin is computed
+    ex VAT: comparing a VAT-inclusive price against a VAT-free cost inflates it.
+
+productos:
+  SKU-A:
+    nombre: Example Serum
+    coste_unitario: 9.00
+    coste_fuente: "supplier invoice, example"
+    precio_web: 39.00
+    # Price history matters: comparing a 2025 order against today's price
+    # produces false alerts, and an alert that gets ignored is not a control.
+    precios:
+      - desde: 2025-01-01
+        precio: 48.00
+        fuente: "example: launch price"
+      - desde: 2025-11-01
+        precio: 43.00
+        fuente: "example: first reduction"
+      - desde: 2026-01-01
+        precio: 39.00
+        fuente: "example: current price"
+    tirada: 1000
+
+  SKU-B:
+    nombre: Example Balm
+    coste_unitario: 2.30
+    coste_fuente: "supplier invoice, example"
+    precio_web: 6.50
+    tirada: 4000
+
+  SKU-C:
+    nombre: Example Tool
+    coste_unitario: 2.20
+    coste_fuente: "supplier invoice plus freight, example"
+    precio_web: 8.00
+    tirada: 100
+
+bundles:
+  duo:
+    sku: SKU-D
+    nombre: Example Duo
+    precio_web: 41.00
+    confirmado: true
+    contiene:
+      - {sku: SKU-A, uds: 1}
+      - {sku: SKU-B, uds: 1}
+    sueltos_declarado: 45.50
+    ahorro_declarado: 4.50
+
+  ritual:
+    sku: SKU-E
+    nombre: Example Ritual
+    precio_web: 42.00
+    confirmado: true
+    contiene:
+      - {sku: SKU-A, uds: 1}
+      - {sku: SKU-C, uds: 1}
+    sueltos_declarado: 47.00
+    ahorro_declarado: 5.00
+
+descuentos:
+  bienvenida:
+    porcentaje: 10
+    activo: true
+
+reglas:
+  bundle_mas_caro_que_su_articulo: true
+  precio_catalogo_igual_a_tienda: true
+  sku_desconocido_es_error: true
+
+objetivo:
+  unidades: 100
+  desde: 2026-01-01
+  hasta: 2026-03-31

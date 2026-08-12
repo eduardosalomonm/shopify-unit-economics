@@ -1,0 +1,245 @@
+<title>Demo Store · Panel de unit economics</title>
+<style>
+  :root {
+    --ground: #EDE1D1;
+    --surface: #F5EDE1;
+    --surface-2: #E3D4C0;
+    --ink: #221813;
+    --ink-soft: #5A4A3F;
+    --ink-faint: #8A7868;
+    --rule: #CCB89D;
+    --accent: #5D5B30;
+    --accent-soft: #6A704C;
+    --critical: #401200;
+    --critical-bg: #E5D2C4;
+    --warn: #7F6044;
+
+    --serif: "Iowan Old Style", "Hoefler Text", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #1A1210;
+      --surface: #221813;
+      --surface-2: #2E211A;
+      --ink: #EDE1D1;
+      --ink-soft: #C4B09A;
+      --ink-faint: #8A7868;
+      --rule: #453227;
+      --accent: #9AA36E;
+      --accent-soft: #8A9460;
+      --critical: #D9A08A;
+      --critical-bg: #33190F;
+      --warn: #C09A72;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #1A1210;
+    --surface: #221813;
+    --surface-2: #2E211A;
+    --ink: #EDE1D1;
+    --ink-soft: #C4B09A;
+    --ink-faint: #8A7868;
+    --rule: #453227;
+    --accent: #9AA36E;
+    --accent-soft: #8A9460;
+    --critical: #D9A08A;
+    --critical-bg: #33190F;
+    --warn: #C09A72;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.5;
+    margin: 0;
+    padding: clamp(1.25rem, 4vw, 3.5rem);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wrap { max-width: 68rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.5rem; }
+
+  header { display: flex; flex-direction: column; gap: .5rem; border-bottom: 2px solid var(--ink); padding-bottom: 1.25rem; }
+  .eyebrow { font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.9rem, 4vw, 2.9rem); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+  .sub { color: var(--ink-soft); font-size: .9rem; max-width: 60ch; }
+
+  h2 { font-family: var(--serif); font-weight: 400; font-size: 1.4rem; margin: 0 0 .35rem; }
+  .note { color: var(--ink-soft); font-size: .85rem; margin: 0 0 1rem; max-width: 68ch; }
+
+  section { display: block; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  .tile { background: var(--surface); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: .3rem; }
+  .tile .label { font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
+  .tile .value { font-family: var(--serif); font-size: 2rem; line-height: 1; }
+  .tile .meta { font-size: .78rem; color: var(--ink-soft); }
+  .tile.alarm .value { color: var(--critical); }
+
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); }
+  th, td { padding: .6rem .8rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); font-weight: 400; border-bottom: 1px solid var(--ink); }
+  tbody tr:last-child td { border-bottom: none; }
+  tr.total td { font-weight: 700; border-top: 1px solid var(--ink); }
+  .neg { color: var(--critical); font-weight: 700; }
+  .pos { color: var(--accent); }
+
+  .pill { display: inline-block; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; padding: .15rem .5rem; border: 1px solid currentColor; }
+  .pill.bad { color: var(--critical); background: var(--critical-bg); }
+  .pill.ok { color: var(--accent); }
+
+  .alert { border: 2px solid var(--critical); background: var(--critical-bg); padding: 1.25rem 1.4rem; display: flex; flex-direction: column; gap: .7rem; }
+  .alert h2 { color: var(--critical); margin: 0; }
+  .alert p { margin: 0; font-size: .9rem; color: var(--ink); max-width: 70ch; }
+
+  .chart { display: grid; grid-template-columns: repeat(18, 1fr); gap: 3px; align-items: end; height: 11rem; padding: 1rem; border: 1px solid var(--rule); background: var(--surface); }
+  .bar { background: var(--accent-soft); position: relative; min-height: 2px; }
+  .bar.zero { background: var(--rule); height: 2px; }
+  .bar span { position: absolute; top: -1.1rem; left: 50%; transform: translateX(-50%); font-size: .65rem; color: var(--ink-soft); }
+  .axis { display: grid; grid-template-columns: repeat(18, 1fr); gap: 3px; margin-top: .4rem; font-size: .58rem; color: var(--ink-faint); text-align: center; }
+  .axis span { overflow: hidden; }
+
+  .timeline { display: flex; flex-wrap: wrap; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  .price { background: var(--surface); padding: .9rem 1.1rem; flex: 1 1 9rem; display: flex; flex-direction: column; gap: .2rem; }
+  .price .amount { font-family: var(--serif); font-size: 1.5rem; }
+  .price .when { font-size: .72rem; color: var(--ink-faint); }
+  .price .units { font-size: .78rem; color: var(--ink-soft); }
+  .price.current { background: var(--surface-2); }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 1.25rem; font-size: .8rem; color: var(--ink-soft); display: flex; flex-direction: column; gap: .4rem; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: .85em; background: var(--surface-2); padding: .1rem .3rem; }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Demo Store · demo-store.example</div>
+    <h1>Panel de unit economics</h1>
+    <p class="sub">Calculado desde los pedidos de Shopify.
+    Ingresos y márgenes <strong>ex IVA</strong>, con los descuentos de pedido repartidos por línea.
+    27 unidades en 19 pedidos. Generado el 12/08/2026.</p>
+  </header>
+
+  <section>
+    <div class="tiles">
+      <div class="tile alarm">
+        <div class="label">Objetivo 100 uds</div>
+        <div class="value">12</div>
+        <div class="meta">0 días · hacen falta 0,0 uds/semana</div>
+      </div>
+      <div class="tile">
+        <div class="label">Unidades históricas</div>
+        <div class="value">27</div>
+        <div class="meta">19 pedidos</div>
+      </div>
+      <div class="tile">
+        <div class="label">Ingreso ex IVA</div>
+        <div class="value">840,81 €</div>
+        <div class="meta">acumulado del periodo</div>
+      </div>
+      <div class="tile">
+        <div class="label">Margen contribución</div>
+        <div class="value">617,75 €</div>
+        <div class="meta">73,5 % sobre ingreso · 27 uds</div>
+      </div>
+      <div class="tile alarm">
+        <div class="label">Sin ventas</div>
+        <div class="value">98</div>
+        <div class="meta">días desde el 06/05/2026</div>
+      </div>
+    </div>
+  </section>
+
+  <section><div class="tiles"><div class="tile"><div class="label">Controles</div><div class="value">OK</div><div class="meta">1 avisos, ningun error</div></div></div></section>
+
+  <section>
+    <h2>Margen por producto</h2>
+    <p class="note">Coste cargado por unidad. El ingreso ya descuenta los codigos aplicados,
+    que Shopify registra a nivel de pedido y no de linea, y esta neto de IVA.</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>SKU</th><th>Producto</th><th>Uds</th><th>Ingreso</th><th>Coste</th><th>Margen</th><th>Margen %</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>TU001</td><td>TU001</td><td>23</td><td>815,39</td><td>213,90</td><td>601,49</td><td>73.8 %</td></tr>
+<tr><td>TU002</td><td>TU002</td><td>3</td><td>18,85</td><td>6,96</td><td>11,89</td><td>63.1 %</td></tr>
+<tr><td>TU003</td><td>TU003</td><td>1</td><td>6,57</td><td>2,20</td><td>4,37</td><td>66.5 %</td></tr>
+<tr class="total"><td>Total</td><td></td><td>27</td><td>840,81</td><td>223,06</td><td>617,75</td><td>73.5 %</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Unidades por mes</h2>
+    <p class="note">Se muestran todos los meses del periodo, incluidos los de cero ventas:
+    omitirlos dibujaria un negocio que no existe.</p>
+    <div class="chart" id="chart"></div>
+    <div class="axis" id="axis"></div>
+  </section>
+
+  <section>
+    <h2>Historico de precios</h2>
+    <p class="note">Reconstruido desde los pedidos. Cada control de precio compara contra el
+    tramo vigente el dia del pedido, no contra el precio de hoy.</p>
+    <div class="timeline">
+      <div class="price"><div class="amount">48,00 €</div><div class="when">desde 2025-01-01</div><div class="units">example: launch price</div></div>
+<div class="price"><div class="amount">43,00 €</div><div class="when">desde 2025-11-01</div><div class="units">example: first reduction</div></div>
+<div class="price current"><div class="amount">39,00 €</div><div class="when">desde 2026-01-01</div><div class="units">example: current price</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Controles de integridad</h2>
+    <p class="note">Cada control existe porque el error correspondiente ocurrio de verdad.
+    Se ejecutan en cada actualizacion y bloquean la publicacion si fallan.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Control</th><th>Resultado</th></tr></thead>
+        <tbody>
+<tr><td>Coherencia de IVA</td><td><span class="pill">1 avisos</span></td></tr>
+<tr><td>SKU desconocido</td><td><span class="pill ok">Pasa</span></td></tr>
+<tr><td>Precio catalogo vs tienda</td><td><span class="pill ok">Pasa</span></td></tr>
+<tr><td>Regla de bundle</td><td><span class="pill ok">Pasa</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <div>Fuente: Shopify Admin API, snapshot <code>orders-demo.json</code>, permisos de solo lectura.
+    Cada cifra es reconstruible desde el snapshot crudo.</div>
+    <div>Generado por <code>publish.py</code> el 12/08/2026. Ninguna cifra de esta pagina
+    esta escrita a mano.</div>
+  </footer>
+
+</div>
+
+<script>
+  var meses = [["mar 25", 3], ["abr", 2], ["may", 1], ["jun", 1], ["jul", 0], ["ago", 0], ["sep", 0], ["oct", 0], ["nov", 2], ["dic", 3], ["ene 26", 0], ["feb", 8], ["mar", 4], ["abr", 0], ["may", 3], ["jun", 0], ["jul", 0], ["ago", 0]];
+  var max = 8;
+  var chart = document.getElementById("chart");
+  var axis = document.getElementById("axis");
+  meses.forEach(function (m) {
+    var bar = document.createElement("div");
+    bar.className = m[1] === 0 ? "bar zero" : "bar";
+    if (m[1] > 0) {
+      bar.style.height = (m[1] / max * 100) + "%";
+      var tag = document.createElement("span");
+      tag.textContent = m[1];
+      bar.appendChild(tag);
+    }
+    chart.appendChild(bar);
+    var label = document.createElement("span");
+    label.textContent = m[0];
+    axis.appendChild(label);
+  });
+</script>

@@ -1,0 +1,15 @@
+# Credentials — never
+.env
+*.token
+
+# Real business data — the public repo runs on synthetic data only.
+# costs.yml carries supplier costs and margins; costs.example.yml is the template.
+costs.yml
+data/raw/
+data/*.db
+data/margins.csv
+panel.html
+
+.DS_Store
+__pycache__/
+*.pyc
