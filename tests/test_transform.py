@@ -72,6 +72,16 @@ class TestOrderLevelDiscount(unittest.TestCase):
         self.assertAlmostEqual(by_sku["A"]["descuento_linea"], 8.0, places=2)
         self.assertAlmostEqual(by_sku["B"]["descuento_linea"], 1.0, places=2)
 
+    def test_real_line_allocations_override_a_proportional_legacy_fallback(self):
+        payload = order([("A", 1, 40.0), ("B", 1, 10.0)], descuento=5.0)
+        # Shopify can allocate a discount unevenly; do not reverse-engineer it.
+        lines = payload["pedidos"][0]["lineItems"]["edges"]
+        lines[0]["node"]["discountAllocations"] = [{"allocatedAmountSet": money(5.0)}]
+        lines[1]["node"]["discountAllocations"] = []
+        by_sku = {r["sku"]: r for r in build_rows(payload, COSTS)}
+        self.assertAlmostEqual(by_sku["A"]["descuento_linea"], 5.0, places=2)
+        self.assertAlmostEqual(by_sku["B"]["descuento_linea"], 0.0, places=2)
+
 
 class TestVatHandling(unittest.TestCase):
     """Storefront prices include VAT; unit costs do not. Margin must be ex VAT."""
