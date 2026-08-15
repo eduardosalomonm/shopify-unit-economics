@@ -1,106 +1,138 @@
 # Shopify unit-economics pipeline
 
-A daily pipeline that pulls real orders from the Shopify Admin API, joins them to a
-declared cost model, and publishes contribution margin per SKU, bundle economics and
-progress against a sales target — replacing a spreadsheet that was maintained by hand
-and had drifted out of sync three separate times.
+A Python pipeline that converts Shopify orders and a declared cost model into
+contribution margin by SKU, bundle-price checks and a static dashboard. It was
+first built for a Shopify e-commerce store, then adapted into this
+credential-free public version so anyone can explore the workflow safely.
 
-Built for a live DTC cosmetics store I co-founded, and running against its real data.
-The public repo ships with **synthetic data** so the whole thing runs end to end without
-credentials.
+The project is designed for two use cases:
 
-**[Live demo panel →](https://eduardosalomonm.github.io/shopify-unit-economics/)**
+| Mode | Best for | Data required |
+|---|---|---|
+| **Excel workflow** | Users who want to edit inputs and generate a dashboard with one click | Included synthetic `.xlsx` workbook |
+| **Private Shopify mode** | A store owner who wants to pull live orders | Local credentials and private cost model |
+
+**[Live demo →](https://eduardosalomonm.github.io/shopify-unit-economics/)** ·
+**[60-second setup →](TLDR.README/README.md)** ·
+**[User guide →](USER_GUIDE.md)** ·
+**[Contributing →](CONTRIBUTING.md)**
+
+## Excel workflow
+
+Open [assets/unit-economics-input.xlsx](assets/unit-economics-input.xlsx), edit the
+yellow cells, save, then double-click:
+
+- macOS: `Run dashboard.command`
+- Windows: `Run dashboard.bat`
+
+It generates and opens `output/dashboard.html`. The included Luma Vale workbook
+holds a rolling 12 months of synthetic DTC trading — multi-line baskets, discount
+codes, seasonality, €83,755.43 gross sales and a €100,000 annual target — so anyone can evaluate the project
+without credentials or packages. The generated dashboard supports quick periods,
+any custom calendar range, and filters for SKU, product/bundle type and promotion
+code. Its filter bar also includes a one-click executive PDF download.
+
+The workbook starts on `Dashboard`, a formula-driven Excel companion with native
+charts for sales by SKU and progress against the annual target. It shows scenario
+sales, target progress, price health and product
+economics immediately, and explains that the polished interactive experience is
+the [published online dashboard](https://eduardosalomonm.github.io/shopify-unit-economics/).
+In the default `Scenario` mode, yellow catalogue prices
+and promotion rates update the blue unit-price and discount cells in `Orders`, so
+the dashboard reflects price experiments after the workbook is saved. Switch
+`Pricing model` to `Actual` when using fixed historical order values. Below-cost
+prices publish with a visible warning; zero or negative selling prices stop with
+an actionable message.
+
+The workbook is a build artefact, not a mystery binary. Regenerate it, and roll its
+trading window forward to today, with:
 
 ```bash
-python3 src/make_demo_data.py    # synthetic snapshot, same shape as the real API
-python3 src/transform.py         # margins   -> data/pipeline.db + data/margins.csv
-python3 src/checks.py            # integrity controls, exit code 1 on error
-python3 src/publish.py           # renders the HTML panel from the database
+python3 src/make_demo_workbook.py
 ```
 
-Python 3.8+, PyYAML the only dependency.
+The dashboard does not publish when integrity checks fail. It detects unknown SKUs,
+invalid bundle claims, discount-code allocations that do not match their declared
+rules, and inconsistent VAT treatment. Price-history mismatches are also checked
+in `Actual` mode; Scenario mode intentionally uses the current catalogue price.
 
----
+## Public developer demo
 
-## What it caught in its first run
-
-The point of the project is not the dashboard, it is the three things that fell out of
-building it. Each one had been sitting in the business's documents for months.
-
-**A 22% overstatement of margin, from two compounding mistakes.** Shopify records discount
-codes at *order* level; the line-level `totalDiscountSet` is always `0.00`, so a naive
-line-item revenue calculation silently ignores every discount ever applied. And storefront
-prices are VAT-inclusive while unit costs are not, so comparing them directly inflates
-margin again. Both are invisible by eye: the numbers still look plausible.
-
-**A price history nobody had.** The flagship product was documented as having one price,
-then two. Reconstructing it from orders showed **four**, and proved that a figure everyone
-had written off as a documentation error was a real price genuinely charged to customers
-for a month. Any historical margin analysis using today's price was wrong.
-
-**Bundle copy that promised a discount that no longer existed.** After a price cut on the
-flagship product, two bundles advertised savings of €3.50 and €3.95 against a "sum of parts"
-figure that predated the cut. Their real saving had gone negative.
-
----
-
-## Design decisions
-
-**Raw snapshots are immutable.** `extract.py` writes the API response untouched and never
-overwrites. Every figure on the panel can be traced back to the exact response that produced
-it. When a number gets challenged, that is where the argument ends.
-
-**Nothing is computed on an invented input.** An SKU with no declared cost does not get an
-estimate — it gets no margin, and `checks.py` turns it into an error. A margin computed on a
-guessed cost is worse than no margin, because it looks the same as a real one.
-
-**Prices are compared against the price in force that day.** Validating a 2025 order against
-2026's price generates false alerts, and a control that cries wolf gets ignored — at which
-point it is not a control.
-
-**Credentials are short-lived.** Since 2026 Shopify no longer issues permanent tokens for new
-apps, so the client exchanges a client ID and secret for a 24-hour token on every run
-(*client credentials grant*). Nothing long-lived is stored on disk, and the app is
-scoped read-only.
-
-**Everything sensitive is out of the repo.** `costs.yml` holds supplier costs and margins and
-is gitignored; `costs.example.yml` is the template. Raw order data, the database and the real
-panel are ignored too. The demo runs on invented figures.
-
-## Integrity controls
-
-| Control | Why it exists |
-|---|---|
-| Unknown SKU | Stops margins being computed on invented costs |
-| Catalogue price vs charged price | Uses the price in force on the order date |
-| Bundle pricing rules | A bundle must beat its parts, and its advertised saving must be true |
-| VAT consistency | Catches SKUs taxed inconsistently across the catalogue |
-
-The demo data has two failures planted in it, so `checks.py` visibly fires on a clean clone
-rather than asking you to take the table above on trust.
-
-## Tests
+The original JSON fixture remains available for automated verification:
 
 ```bash
+python3 src/make_demo_data.py
+COSTS_FILE=costs.example.json SNAPSHOT=data/raw/orders-demo.json python3 src/transform.py
+COSTS_FILE=costs.example.json SNAPSHOT=data/raw/orders-demo.json python3 src/checks.py
+# The public dashboard itself is rebuilt from the editable workbook so its
+# targets, discount rules and visible data always match one another.
+python3 src/make_demo_workbook.py
+python3 src/run_excel_dashboard.py --output docs/index.html
 python3 -m unittest discover -s tests -v
 ```
 
-Twelve tests covering the discount split and the VAT conversion — the two calculations that
-were wrong in the first working version, and whose wrongness is not visible by inspection.
+Python 3.8+ and the standard library are enough for the public path. Run
+`python3 src/make_demo_data.py --with-errors` to create an explicit invalid fixture;
+the checks and normal publication must fail.
 
-## Layout
+## Design principles
 
+- **Immutable raw snapshots.** Every number can be traced back to an extracted
+  input file.
+- **No invented costs.** An unknown SKU produces an error, not a guessed margin.
+- **Historical prices.** Actual mode checks orders against the price active on that date;
+  Scenario mode deliberately uses the editable current catalogue price.
+- **Final discount allocations.** Shopify’s allocated line discount is used when
+  available, rather than reverse-engineering discounts from totals.
+- **Private data stays private.** The public workbook and demo data are synthetic.
+- **Nothing is inferred that was not measured.** Stock on hand drives the inventory
+  view; without it the tab says so instead of estimating stock from sales.
+
+## Private Shopify mode
+
+1. Copy `.env.example` to `.env`. Add the `myshopify.com` domain, client ID and
+   client secret for an app owned by the same Shopify organization. Grant only
+   `read_orders` and `read_products`; `read_inventory` is only for catalogue
+   inspection.
+2. Create a private `costs.private.json` from `costs.example.json` or use a local
+   `costs.yml`. Neither is committed.
+3. Verify the connection:
+
+   ```bash
+   python3 src/check_access.py
+   ```
+
+4. Extract and reconcile against an independently verified unit count:
+
+   ```bash
+   python3 src/extract.py --since 2025-01-01 --expected-units 27
+   COSTS_FILE=costs.private.json python3 src/transform.py
+   COSTS_FILE=costs.private.json python3 src/checks.py
+   COSTS_FILE=costs.private.json python3 src/publish.py
+   ```
+
+`27` is an example only. Replace it with the independent total for the selected
+window. The extractor paginates orders and line items and writes immutable snapshots.
+
+## Project layout
+
+```text
+assets/                           Editable public Excel starter workbook
+docs/                             GitHub Pages dashboard and executive-summary PDF
+src/                              Python pipeline, Excel workflow, and dashboard source
+tests/                            Automated calculation and interface checks
+TLDR.README/                      Shortest path for non-technical reviewers
+costs.example.json                Synthetic cost model for the JSON demo path
+Run dashboard.command / .bat      One-click Excel workflow launchers for macOS / Windows
+README.md                         Project overview and quick start
+USER_GUIDE.md                     Step-by-step guide for non-technical users
+CONTRIBUTING.md                   Development and verification conventions
 ```
-src/shopify.py           Admin API client: auth, pagination, rate-limit handling
-src/check_access.py      Verifies credentials, scopes and history depth before anything else
-src/extract.py           Orders -> immutable raw snapshot, with a reconciliation gate
-src/inspect_products.py  Catalogue x-ray: prices, tax treatment, new SKUs
-src/transform.py         Line-level margins -> SQLite + CSV
-src/checks.py            Integrity controls
-src/publish.py           Renders the panel from the database
-src/make_demo_data.py    Synthetic snapshot for running without a store
-```
 
-## Licence
+The pipeline creates its working files in ignored `data/` and `output/` folders.
+They are deliberately excluded from the GitHub package and are recreated when a
+user runs the workflow.
 
-MIT.
+## License
+
+MIT
