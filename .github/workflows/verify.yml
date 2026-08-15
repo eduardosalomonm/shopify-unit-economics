@@ -1,0 +1,40 @@
+name: Verify public demo
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  public-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Rebuild the demo workbook from source
+        run: |
+          python3 src/make_demo_workbook.py --output /tmp/workbook.xlsx
+          test -s /tmp/workbook.xlsx
+      - name: Run the dependency-free public path
+        run: |
+          python3 src/run_excel_dashboard.py --output /tmp/excel-dashboard.html
+          test -s /tmp/excel-dashboard.html
+          test -s /tmp/executive-summary.pdf
+          python3 src/make_demo_data.py
+          SNAPSHOT=data/raw/orders-demo.json python3 src/transform.py
+          SNAPSHOT=data/raw/orders-demo.json python3 src/checks.py
+          SNAPSHOT=data/raw/orders-demo.json PANEL_OUT=/tmp/panel.html python3 src/publish.py
+          test -s /tmp/panel.html
+      - name: Fail if the published demo is older than the data it claims to show
+        run: |
+          if [ assets/unit-economics-input.xlsx -nt docs/index.html ]; then
+            echo "docs/index.html is older than the workbook it is generated from."
+            echo "Refresh it: python3 src/run_excel_dashboard.py --output docs/index.html"
+            exit 1
+          fi
+      - name: Fail if the published demo still has unfilled placeholders
+        run: |
+          ! grep -q "{{" /tmp/excel-dashboard.html
+      - name: Run calculation tests
+        run: python3 -m unittest discover -s tests -v
