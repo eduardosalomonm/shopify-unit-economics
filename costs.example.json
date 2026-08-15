@@ -1,0 +1,22 @@
+{
+  "meta": {"marca": "Luma Vale", "dominio": "lumavale.example", "moneda": "EUR", "actualizado": "2026-08-14", "objetivo_ventas_brutas": 100000, "nota_costes": "Synthetic landed costs for the public portfolio demo."},
+  "iva": {"tipo_pct": 21.0, "precios_incluyen_iva": true},
+  "productos": {
+    "SKU-A": {"nombre": "Renewal Serum", "coste_unitario": 12.8, "coste_fuente": "Synthetic supplier invoice", "precio_web": 69.9, "precios": [{"desde": "2025-08-01", "precio": 64.0, "fuente": "Synthetic launch price"}, {"desde": "2026-01-01", "precio": 69.9, "fuente": "Synthetic price increase"}], "tirada": 4000},
+    "SKU-B": {"nombre": "Barrier Balm", "coste_unitario": 3.9, "coste_fuente": "Synthetic supplier invoice", "precio_web": 19.0, "precios": [{"desde": "2025-08-01", "precio": 18.0, "fuente": "Synthetic launch price"}, {"desde": "2026-03-01", "precio": 19.0, "fuente": "Synthetic price increase"}], "tirada": 2200},
+    "SKU-C": {"nombre": "Contour Stone", "coste_unitario": 5.4, "coste_fuente": "Synthetic supplier invoice plus freight", "precio_web": 29.0, "tirada": 1200},
+    "SKU-F": {"nombre": "Cloud Cleanser", "coste_unitario": 6.7, "coste_fuente": "Synthetic supplier invoice", "precio_web": 34.0, "tirada": 1800}
+  },
+  "bundles": {
+    "daily_duo": {"sku": "SKU-D", "nombre": "Daily Duo", "precio_web": 79.0, "confirmado": true, "contiene": [{"sku": "SKU-A", "uds": 1}, {"sku": "SKU-B", "uds": 1}], "sueltos_declarado": 88.9, "ahorro_declarado": 9.9},
+    "complete_ritual": {"sku": "SKU-E", "nombre": "Complete Ritual", "precio_web": 89.0, "confirmado": true, "contiene": [{"sku": "SKU-A", "uds": 1}, {"sku": "SKU-C", "uds": 1}], "sueltos_declarado": 98.9, "ahorro_declarado": 9.9},
+    "daily_reset_set": {"sku": "SKU-G", "nombre": "Daily Reset Set", "precio_web": 69.0, "confirmado": true, "contiene": [{"sku": "SKU-B", "uds": 1}, {"sku": "SKU-C", "uds": 1}, {"sku": "SKU-F", "uds": 1}], "sueltos_declarado": 82.0, "ahorro_declarado": 13.0}
+  },
+  "descuentos": {
+    "WELCOME10": {"porcentaje": 10, "desde": "2025-08-01", "hasta": "2026-12-31", "activo": true},
+    "SUMMER15": {"porcentaje": 15, "desde": "2025-08-01", "hasta": "2026-12-31", "activo": true},
+    "VIP20": {"porcentaje": 20, "desde": "2025-08-01", "hasta": "2026-12-31", "activo": true}
+  },
+  "reglas": {"bundle_mas_caro_que_su_articulo": true, "precio_catalogo_igual_a_tienda": true, "sku_desconocido_es_error": true},
+  "objetivo": {"unidades": 1500, "desde": "2026-01-01", "hasta": "2026-12-31"}
+}

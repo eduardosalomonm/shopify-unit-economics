@@ -1,8 +1,4 @@
-"""Cliente minimo de la Shopify Admin GraphQL API. Solo libreria estandar.
-
-Respeta el throttleStatus desde el principio: paginar el historico completo agota
-el coste de consulta de la API y la respuesta deja de traer datos sin avisar claro.
-"""
+"""Minimal Shopify Admin GraphQL API client using only the standard library."""
 
 import json
 import os
@@ -11,7 +7,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-API_VERSION = "2025-07"
+# Keep this on a supported stable release; Shopify retires versions after 12 months.
+API_VERSION = "2026-07"
 DEFAULT_TIMEOUT = 30
 
 
@@ -20,7 +17,7 @@ class ShopifyError(Exception):
 
 
 def load_env(path=".env"):
-    """Lee un .env sencillo (CLAVE=valor). Sin dependencias."""
+    """Read a simple KEY=value .env file without dependencies."""
     env = {}
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as fh:
@@ -36,20 +33,13 @@ def load_env(path=".env"):
               if not env.get(k)]
     if faltan:
         raise ShopifyError(
-            "Faltan en .env: %s. Copia .env.example a .env y rellenalo." % ", ".join(faltan)
+            "Missing from .env: %s. Copy .env.example to .env and fill it in." % ", ".join(faltan)
         )
     return env
 
 
 def mint_token(store, client_id, client_secret):
-    """Client credentials grant: cambia ID+secreto por un access token de 24 h.
-
-    Desde 2026 no existen los tokens shpat_ permanentes para apps nuevas. El token
-    se pide en cada ejecucion y no se guarda en disco, que es justo lo que queremos:
-    lo unico que vive en .env es la credencial que puedes rotar desde el dashboard.
-
-    Requisito: la app y la tienda deben pertenecer a la misma organizacion de Shopify.
-    """
+    """Exchange client credentials for a 24-hour access token."""
     url = "https://%s/admin/oauth/access_token" % store
     data = urllib.parse.urlencode({
         "grant_type": "client_credentials",
@@ -67,17 +57,17 @@ def mint_token(store, client_id, client_secret):
         detail = exc.read().decode("utf-8", "replace")[:500]
         if exc.code in (400, 401):
             raise ShopifyError(
-                "No se pudo obtener el token (HTTP %s).\n"
-                "Causas habituales, por orden de frecuencia:\n"
-                "  · la app no esta instalada en la tienda (instalala desde el dev dashboard)\n"
-                "  · el Client ID o el Secret estan mal copiados\n"
-                "  · la app y la tienda no estan en la misma organizacion de Shopify\n"
-                "Respuesta: %s" % (exc.code, detail)
+                "Could not obtain an access token (HTTP %s).\n"
+                "Common causes:\n"
+                "  · the app is not installed on the store\n"
+                "  · the Client ID or Secret is incorrect\n"
+                "  · the app and store are not in the same Shopify organization\n"
+                "Response: %s" % (exc.code, detail)
             )
-        raise ShopifyError("HTTP %s al pedir el token: %s" % (exc.code, detail))
+        raise ShopifyError("HTTP %s while requesting the token: %s" % (exc.code, detail))
 
     if "access_token" not in body:
-        raise ShopifyError("Respuesta inesperada del endpoint de token: %s" % body)
+        raise ShopifyError("Unexpected token endpoint response: %s" % body)
     return body
 
 
@@ -87,11 +77,12 @@ class Client:
         self.token = token
         self.url = "https://%s/admin/api/%s/graphql.json" % (store, API_VERSION)
         self.last_throttle = None
+        self.actual_api_version = None
         self.granted_scopes = []
 
     @classmethod
     def from_env(cls, path=".env"):
-        """Camino normal: lee .env, pide un token fresco y devuelve el cliente listo."""
+        """Normal path: read .env, request a fresh token and return a ready client."""
         env = load_env(path)
         grant = mint_token(env["SHOPIFY_STORE"], env["SHOPIFY_CLIENT_ID"],
                            env["SHOPIFY_CLIENT_SECRET"])
@@ -114,6 +105,7 @@ class Client:
         for attempt in range(retries):
             try:
                 with urllib.request.urlopen(request, timeout=DEFAULT_TIMEOUT) as response:
+                    self.actual_api_version = response.headers.get("X-Shopify-API-Version")
                     body = json.loads(response.read().decode("utf-8"))
             except urllib.error.HTTPError as exc:
                 if exc.code == 429 and attempt < retries - 1:
@@ -124,7 +116,7 @@ class Client:
 
             errors = body.get("errors")
             if errors:
-                # THROTTLED se reintenta; el resto es error real (scope, sintaxis, campo).
+                # Retry throttling; other errors are real scope, syntax or field errors.
                 codes = {
                     (e.get("extensions") or {}).get("code") for e in errors if isinstance(e, dict)
                 }
@@ -136,7 +128,7 @@ class Client:
             self._respect_throttle(body)
             return body["data"]
 
-        raise ShopifyError("Agotados los reintentos por throttling")
+        raise ShopifyError("Throttling retries exhausted")
 
     def _respect_throttle(self, body):
         cost = (body.get("extensions") or {}).get("cost") or {}
@@ -145,7 +137,11 @@ class Client:
             return
         self.last_throttle = throttle
         available = throttle.get("currentlyAvailable", 1000)
+        maximum = throttle.get("maximumAvailable", 1000)
         restore = throttle.get("restoreRate", 50) or 50
-        # Por debajo del 25% del cupo, esperar a recuperar en vez de chocar contra el limite.
-        if available < throttle.get("maximumAvailable", 1000) * 0.25:
-            time.sleep(min(10.0, (restore * 4) / restore))
+        # Below 25% of capacity, wait for the bucket to refill back to that
+        # threshold rather than collide with the limit. restoreRate is points per
+        # second, so the deficit divided by it is the wait in seconds.
+        threshold = maximum * 0.25
+        if available < threshold:
+            time.sleep(min(10.0, (threshold - available) / restore))

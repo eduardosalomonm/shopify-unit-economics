@@ -1,23 +1,12 @@
-"""Fase 0, paso 3: verificar el acceso antes de escribir nada mas.
-
-Comprueba, en este orden:
-  1. Que el client credentials grant funciona y devuelve un token.
-  2. Que los permisos concedidos incluyen los que necesita el pipeline.
-  3. Que la tienda responde y es la correcta.
-  4. Si el historico completo es accesible o solo la ventana de 60 dias.
-
-El punto 4 es el que decide si A1 tiene sentido: sin los 14 meses de historico,
-el panel no puede reconstruir las 27 unidades ni el contador de 100.
-
-Uso:  python3 src/check_access.py
-"""
+"""Verify Shopify access before extracting or writing any local data."""
 
 import datetime
 import sys
 
 from shopify import Client, ShopifyError
 
-NECESARIOS = ["read_orders", "read_products", "read_inventory"]
+NECESARIOS = ["read_orders", "read_products"]
+OPCIONALES = ["read_inventory"]
 
 SHOP_QUERY = """
 {
@@ -43,85 +32,91 @@ RECENT_ORDERS_QUERY = """
 
 
 def main():
-    print("1. Obtener token (client credentials grant)")
+    print("1. Obtain token (client credentials grant)")
     try:
         client = Client.from_env()
     except ShopifyError as exc:
-        print("   FALLO.")
+        print("   FAILED.")
         print("   %s" % exc)
         return 1
-    print("   OK  token obtenido, valido 24 h. No se guarda en disco.")
+    print("   OK  token obtained, valid for 24 h. It is not stored on disk.")
 
-    print("2. Permisos concedidos")
+    print("2. Granted permissions")
     scopes = client.granted_scopes
     if not scopes:
-        print("   La respuesta no trajo scopes. Revisa la configuracion de la app.")
+        print("   The response did not include scopes. Check the app configuration.")
     else:
         lectura = sorted(s for s in scopes if s.startswith("read_"))
         escritura = sorted(s for s in scopes if not s.startswith("read_"))
-        print("   Lectura:   %s" % (", ".join(lectura) or "ninguno"))
-        print("   Escritura: %s" % (", ".join(escritura) or "ninguno"))
+        print("   Read:  %s" % (", ".join(lectura) or "none"))
+        print("   Write: %s" % (", ".join(escritura) or "none"))
 
         faltan = [s for s in NECESARIOS if s not in scopes]
         if faltan:
-            print("   FALTAN: %s" % ", ".join(faltan))
-            print("   Anadelos en el dev dashboard, en los scopes de la app, y reinstala.")
+            print("   MISSING: %s" % ", ".join(faltan))
+            print("   Add them in the Shopify Dev Dashboard, then reinstall the app.")
             return 1
-        print("   OK  estan los tres que necesita el pipeline.")
+        print("   OK  the pipeline's minimum permissions are granted.")
+
+        optional_missing = [s for s in OPCIONALES if s not in scopes]
+        if optional_missing:
+            print("   Note: %s is only needed for inspect_products.py." % ", ".join(optional_missing))
 
         if escritura:
             print()
-            print("   AVISO: la app tiene permisos de ESCRITURA que este proyecto no usa.")
-            print("   El pipeline solo lee. Quitalos cuando puedas.")
+            print("   WARNING: the app has WRITE permissions this project does not use.")
+            print("   The pipeline only reads. Remove them when practical.")
         if "read_all_orders" not in scopes:
-            print("   Nota: sin read_all_orders solo se ven los ultimos 60 dias (paso 4).")
+            print("   Note: without read_all_orders, only the latest 60 days are visible (step 4).")
 
-    print("3. Conexion con la tienda")
+    print("3. Store connection")
     try:
         shop = client.query(SHOP_QUERY)["shop"]
     except ShopifyError as exc:
-        print("   FALLO: %s" % exc)
+        print("   FAILED: %s" % exc)
         return 1
     print("   OK  %s (%s) · %s · %s"
           % (shop["name"], shop["myshopifyDomain"], shop["currencyCode"], shop["ianaTimezone"]))
+    if client.actual_api_version:
+        print("   API efectiva: %s" % client.actual_api_version)
 
     try:
         recent = client.query(RECENT_ORDERS_QUERY)["orders"]["edges"]
     except ShopifyError as exc:
-        print("   FALLO al leer pedidos: %s" % exc)
+        print("   FAILED while reading orders: %s" % exc)
         return 1
     if recent:
-        print("   Ultimo pedido: %s (%s)"
+        print("   Latest order: %s (%s)"
               % (recent[0]["node"]["name"], recent[0]["node"]["createdAt"][:10]))
     else:
-        print("   Sin pedidos en la ventana visible.")
+        print("   No orders in the visible window.")
 
-    print("4. Alcance del historico")
+    print("4. Historical access")
     try:
         oldest = client.query(OLDEST_ORDER_QUERY)["orders"]["edges"]
     except ShopifyError as exc:
-        print("   FALLO: %s" % exc)
+        print("   FAILED: %s" % exc)
         return 1
 
     if not oldest:
-        print("   Sin pedidos visibles. Revisa el scope read_all_orders.")
+        print("   No visible orders. Check the read_all_orders scope.")
         return 1
 
     first_date = oldest[0]["node"]["createdAt"][:10]
     age_days = (datetime.date.today()
                 - datetime.date(*[int(p) for p in first_date.split("-")])).days
-    print("   Pedido mas antiguo visible: %s (%s dias)" % (first_date, age_days))
+    print("   Oldest visible order: %s (%s days)" % (first_date, age_days))
 
     if age_days < 70:
         print()
-        print("   AVISO: solo se ve la ventana de 60 dias.")
-        print("   Hace falta el scope read_all_orders.")
-        print("   Sin el no hay historico de 14 meses y el panel pierde su sentido.")
+        print("   WARNING: only the 60-day window is visible.")
+        print("   The read_all_orders scope is required.")
+        print("   Without it, there is no full historical view.")
         return 2
 
-    print("   OK  el historico completo es accesible.")
+    print("   OK  full history is accessible.")
     print()
-    print("Fase 0 superada. Siguiente: python3 src/extract.py")
+    print("Access check passed. Next: python3 src/extract.py")
     return 0
 
 

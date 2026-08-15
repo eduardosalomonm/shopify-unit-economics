@@ -19,20 +19,14 @@ import os
 import sqlite3
 import sys
 
-import yaml
+from config import ConfigError, costs_path, load_costs
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RAW_DIR = os.path.join(BASE, "data", "raw")
-DB_PATH = os.path.join(BASE, "data", "pipeline.db")
-CSV_PATH = os.path.join(BASE, "data", "margins.csv")
-_REAL = os.path.join(BASE, "costs.yml")
-# El repo publico no lleva costs.yml (costes de proveedor). Con el ejemplo, quien
-# clone puede ejecutar el pipeline entero sin tener datos reales ni credenciales.
-# COSTS_FILE fuerza un modelo concreto (la demo usa el de ejemplo aunque exista el real).
-COSTS_PATH = os.environ.get("COSTS_FILE") or (
-    _REAL if os.path.exists(_REAL) else os.path.join(BASE, "costs.example.yml"))
-if not os.path.isabs(COSTS_PATH):
-    COSTS_PATH = os.path.join(BASE, COSTS_PATH)
+DATA_DIR = os.path.abspath(os.environ.get("PIPELINE_DATA_DIR", os.path.join(BASE, "data")))
+RAW_DIR = os.path.join(DATA_DIR, "raw")
+DB_PATH = os.path.join(DATA_DIR, "pipeline.db")
+CSV_PATH = os.path.join(DATA_DIR, "margins.csv")
+COSTS_PATH = costs_path()
 
 
 def latest_snapshot():
@@ -43,8 +37,8 @@ def latest_snapshot():
         return forzado if os.path.isabs(forzado) else os.path.join(BASE, forzado)
     files = glob.glob(os.path.join(RAW_DIR, "orders-*.json"))
     if not files:
-        raise SystemExit("No hay snapshots en data/raw. Ejecuta primero src/extract.py "
-                         "(o src/make_demo_data.py para la demo sintetica)")
+        raise SystemExit("No snapshots exist in data/raw. Run src/extract.py first "
+                         "(or src/make_demo_data.py for the synthetic demo).")
     return max(files, key=os.path.getmtime)
 
 
@@ -54,6 +48,24 @@ def money(node, field):
     shop_money = block.get("shopMoney") or {}
     amount = shop_money.get("amount")
     return float(amount) if amount is not None else None
+
+
+def allocated_discount(item):
+    """Return Shopify's final discount allocation for a line, if supplied.
+
+    The Admin API allocates every applicable discount to the line, including
+    code-based and order-level promotions. This is more accurate than dividing an
+    order total proportionally, which can incorrectly assign a shipping discount
+    to merchandise revenue. Older snapshots and the minimal test fixture have no
+    allocation field, so callers can explicitly use the legacy fallback.
+    """
+    allocations = item.get("discountAllocations")
+    if allocations is None:
+        return None
+    total = 0.0
+    for allocation in allocations:
+        total += money(allocation, "allocatedAmountSet") or 0.0
+    return round(total, 2)
 
 
 def catalogo(costs):
@@ -116,9 +128,10 @@ def precio_catalogo(costs, sku, fecha):
 def build_rows(snapshot, costs):
     """Una fila por linea de pedido, con dos correcciones que no son opcionales:
 
-    1. El descuento vive a nivel de PEDIDO (currentTotalDiscountsSet), no en la linea:
-       totalDiscountSet siempre viene a 0.0. Si se ignora, el ingreso sale inflado.
-       Se reparte proporcionalmente al importe bruto de cada linea.
+    1. El descuento final se toma de discountAllocations por linea. Es la asignacion
+       de Shopify para descuentos de codigo, pedido y producto. Snapshots antiguos
+       sin ese campo usan un reparto proporcional como compatibilidad, nunca como
+       sustituto de una extraccion actual.
     2. Los precios de la tienda INCLUYEN IVA (taxesIncluded). Comparar un precio con
        IVA contra un coste sin IVA infla el margen. El margen se calcula ex IVA.
     """
@@ -143,9 +156,12 @@ def build_rows(snapshot, costs):
             bruto = money(item, "originalUnitPriceSet")
             base_linea = (bruto or 0.0) * qty
 
-            # 1. Reparto del descuento de pedido
-            cuota = (base_linea / base_total) if base_total else 0.0
-            descuento_linea = round(descuento_pedido * cuota, 2)
+            # 1. Shopify supplies a final allocation per line. Fall back only for
+            # legacy raw snapshots that predate that field.
+            descuento_linea = allocated_discount(item)
+            if descuento_linea is None:
+                cuota = (base_linea / base_total) if base_total else 0.0
+                descuento_linea = round(descuento_pedido * cuota, 2)
             ingreso_con_iva = round(base_linea - descuento_linea, 2)
 
             # 2. Paso a ex IVA. Solo las lineas gravadas llevan IVA incluido.
@@ -188,6 +204,7 @@ def build_rows(snapshot, costs):
 
 
 def write_db(rows):
+    os.makedirs(DATA_DIR, exist_ok=True)
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)   # se reconstruye siempre desde el snapshot crudo
     conn = sqlite3.connect(DB_PATH)
@@ -216,11 +233,13 @@ def write_db(rows):
 
 
 def write_csv(rows, costs):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    tabla = catalogo(costs)
     resumen = {}
     for row in rows:
         entry = resumen.setdefault(row["sku"], {
             "sku": row["sku"],
-            "nombre": (catalogo(costs).get(row["sku"]) or {}).get("nombre", "DESCONOCIDO"),
+            "nombre": (tabla.get(row["sku"]) or {}).get("nombre", "DESCONOCIDO"),
             "unidades": 0, "ingreso_neto": 0.0, "coste_total": 0.0, "margen": 0.0,
         })
         entry["unidades"] += row["unidades"]
@@ -256,8 +275,10 @@ def contador_objetivo(rows, costs):
 
 
 def main():
-    with open(COSTS_PATH, "r", encoding="utf-8") as fh:
-        costs = yaml.safe_load(fh)
+    try:
+        costs = load_costs(COSTS_PATH)
+    except ConfigError as exc:
+        raise SystemExit("COST MODEL ERROR: %s" % exc)
 
     path = latest_snapshot()
     with open(path, "r", encoding="utf-8") as fh:
@@ -268,10 +289,10 @@ def main():
     write_db(rows)
     filas = write_csv(rows, costs)
 
-    print("Lineas procesadas: %d" % len(rows))
+    print("Lines processed: %d" % len(rows))
     print()
     print("%-8s %-28s %6s %10s %10s %10s %8s"
-          % ("SKU", "Producto", "Uds", "Ingreso", "Coste", "Margen", "Margen%"))
+          % ("SKU", "Product", "Units", "Revenue", "Cost", "Margin", "Margin%"))
     total_u = total_i = total_m = 0
     for f in filas:
         print("%-8s %-28s %6d %10.2f %10.2f %10.2f %7s"
@@ -287,15 +308,15 @@ def main():
 
     meta, vendidas, dias, desde, hasta, hoy = contador_objetivo(rows, costs)
     print()
-    print("OBJETIVO %d unidades (%s a %s)" % (meta, desde, hasta))
-    print("   vendidas en ventana: %d · faltan: %d · dias restantes: %d"
+    print("TARGET %d units (%s to %s)" % (meta, desde, hasta))
+    print("   sold in window: %d · remaining: %d · days remaining: %d"
           % (vendidas, meta - vendidas, dias))
     if dias:
-        print("   ritmo necesario: %.1f unidades/semana" % ((meta - vendidas) / (dias / 7.0)))
+        print("   required pace: %.1f units/week" % ((meta - vendidas) / (dias / 7.0)))
 
     print()
-    print("Escrito: data/pipeline.db · data/margins.csv")
-    print("Siguiente: python3 src/checks.py")
+    print("Written: data/pipeline.db · data/margins.csv")
+    print("Next: python3 src/checks.py")
     return 0
 
 

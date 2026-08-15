@@ -1,237 +1,30 @@
-<title>{{MARCA}} · Panel de unit economics</title>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{BRAND}} · Performance dashboard</title>
 <style>
-  :root {
-    --ground: #EDE1D1;
-    --surface: #F5EDE1;
-    --surface-2: #E3D4C0;
-    --ink: #221813;
-    --ink-soft: #5A4A3F;
-    --ink-faint: #8A7868;
-    --rule: #CCB89D;
-    --accent: #5D5B30;
-    --accent-soft: #6A704C;
-    --critical: #401200;
-    --critical-bg: #E5D2C4;
-    --warn: #7F6044;
-
-    --serif: "Iowan Old Style", "Hoefler Text", "Palatino Linotype", Palatino, Georgia, serif;
-    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ground: #1A1210;
-      --surface: #221813;
-      --surface-2: #2E211A;
-      --ink: #EDE1D1;
-      --ink-soft: #C4B09A;
-      --ink-faint: #8A7868;
-      --rule: #453227;
-      --accent: #9AA36E;
-      --accent-soft: #8A9460;
-      --critical: #D9A08A;
-      --critical-bg: #33190F;
-      --warn: #C09A72;
-    }
-  }
-
-  :root[data-theme="dark"] {
-    --ground: #1A1210;
-    --surface: #221813;
-    --surface-2: #2E211A;
-    --ink: #EDE1D1;
-    --ink-soft: #C4B09A;
-    --ink-faint: #8A7868;
-    --rule: #453227;
-    --accent: #9AA36E;
-    --accent-soft: #8A9460;
-    --critical: #D9A08A;
-    --critical-bg: #33190F;
-    --warn: #C09A72;
-  }
-
-  * { box-sizing: border-box; }
-
-  body {
-    background: var(--ground);
-    color: var(--ink);
-    font-family: var(--sans);
-    line-height: 1.5;
-    margin: 0;
-    padding: clamp(1.25rem, 4vw, 3.5rem);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .wrap { max-width: 68rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.5rem; }
-
-  header { display: flex; flex-direction: column; gap: .5rem; border-bottom: 2px solid var(--ink); padding-bottom: 1.25rem; }
-  .eyebrow { font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); }
-  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.9rem, 4vw, 2.9rem); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
-  .sub { color: var(--ink-soft); font-size: .9rem; max-width: 60ch; }
-
-  h2 { font-family: var(--serif); font-weight: 400; font-size: 1.4rem; margin: 0 0 .35rem; }
-  .note { color: var(--ink-soft); font-size: .85rem; margin: 0 0 1rem; max-width: 68ch; }
-
-  section { display: block; }
-
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
-  .tile { background: var(--surface); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: .3rem; }
-  .tile .label { font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
-  .tile .value { font-family: var(--serif); font-size: 2rem; line-height: 1; }
-  .tile .meta { font-size: .78rem; color: var(--ink-soft); }
-  .tile.alarm .value { color: var(--critical); }
-
-  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-  .scroll { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); }
-  th, td { padding: .6rem .8rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
-  th:first-child, td:first-child { text-align: left; }
-  thead th { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); font-weight: 400; border-bottom: 1px solid var(--ink); }
-  tbody tr:last-child td { border-bottom: none; }
-  tr.total td { font-weight: 700; border-top: 1px solid var(--ink); }
-  .neg { color: var(--critical); font-weight: 700; }
-  .pos { color: var(--accent); }
-
-  .pill { display: inline-block; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; padding: .15rem .5rem; border: 1px solid currentColor; }
-  .pill.bad { color: var(--critical); background: var(--critical-bg); }
-  .pill.ok { color: var(--accent); }
-
-  .alert { border: 2px solid var(--critical); background: var(--critical-bg); padding: 1.25rem 1.4rem; display: flex; flex-direction: column; gap: .7rem; }
-  .alert h2 { color: var(--critical); margin: 0; }
-  .alert p { margin: 0; font-size: .9rem; color: var(--ink); max-width: 70ch; }
-
-  .chart { display: grid; grid-template-columns: repeat({{N_MESES}}, 1fr); gap: 3px; align-items: end; height: 11rem; padding: 1rem; border: 1px solid var(--rule); background: var(--surface); }
-  .bar { background: var(--accent-soft); position: relative; min-height: 2px; }
-  .bar.zero { background: var(--rule); height: 2px; }
-  .bar span { position: absolute; top: -1.1rem; left: 50%; transform: translateX(-50%); font-size: .65rem; color: var(--ink-soft); }
-  .axis { display: grid; grid-template-columns: repeat({{N_MESES}}, 1fr); gap: 3px; margin-top: .4rem; font-size: .58rem; color: var(--ink-faint); text-align: center; }
-  .axis span { overflow: hidden; }
-
-  .timeline { display: flex; flex-wrap: wrap; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
-  .price { background: var(--surface); padding: .9rem 1.1rem; flex: 1 1 9rem; display: flex; flex-direction: column; gap: .2rem; }
-  .price .amount { font-family: var(--serif); font-size: 1.5rem; }
-  .price .when { font-size: .72rem; color: var(--ink-faint); }
-  .price .units { font-size: .78rem; color: var(--ink-soft); }
-  .price.current { background: var(--surface-2); }
-
-  footer { border-top: 1px solid var(--rule); padding-top: 1.25rem; font-size: .8rem; color: var(--ink-soft); display: flex; flex-direction: column; gap: .4rem; }
-  code { font-family: ui-monospace, Menlo, monospace; font-size: .85em; background: var(--surface-2); padding: .1rem .3rem; }
-</style>
-
-<div class="wrap">
-
-  <header>
-    <div class="eyebrow">{{MARCA}} · {{DOMINIO}}</div>
-    <h1>Panel de unit economics</h1>
-    <p class="sub">Calculado desde los pedidos de Shopify.
-    Ingresos y márgenes <strong>ex IVA</strong>, con los descuentos de pedido repartidos por línea.
-    {{UNIDADES}} unidades en {{PEDIDOS}} pedidos. Generado el {{GENERADO}}.</p>
-  </header>
-
-  <section>
-    <div class="tiles">
-      <div class="tile alarm">
-        <div class="label">Objetivo {{OBJETIVO}} uds</div>
-        <div class="value">{{VENDIDAS_VENTANA}}</div>
-        <div class="meta">{{DIAS}} días · hacen falta {{RITMO}} uds/semana</div>
-      </div>
-      <div class="tile">
-        <div class="label">Unidades históricas</div>
-        <div class="value">{{UNIDADES}}</div>
-        <div class="meta">{{PEDIDOS}} pedidos</div>
-      </div>
-      <div class="tile">
-        <div class="label">Ingreso ex IVA</div>
-        <div class="value">{{INGRESO}} €</div>
-        <div class="meta">acumulado del periodo</div>
-      </div>
-      <div class="tile">
-        <div class="label">Margen contribución</div>
-        <div class="value">{{MARGEN}} €</div>
-        <div class="meta">{{MARGEN_PCT}} % sobre ingreso · {{UNIDADES}} uds</div>
-      </div>
-      <div class="tile alarm">
-        <div class="label">Sin ventas</div>
-        <div class="value">{{SIN_VENTAS}}</div>
-        <div class="meta">días desde el {{ULTIMA_VENTA}}</div>
-      </div>
-    </div>
-  </section>
-
-  {{ALERTAS}}
-
-  <section>
-    <h2>Margen por producto</h2>
-    <p class="note">Coste cargado por unidad. El ingreso ya descuenta los codigos aplicados,
-    que Shopify registra a nivel de pedido y no de linea, y esta neto de IVA.</p>
-    <div class="scroll">
-      <table>
-        <thead>
-          <tr><th>SKU</th><th>Producto</th><th>Uds</th><th>Ingreso</th><th>Coste</th><th>Margen</th><th>Margen %</th></tr>
-        </thead>
-        <tbody>
-          {{FILAS_SKU}}
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section>
-    <h2>Unidades por mes</h2>
-    <p class="note">Se muestran todos los meses del periodo, incluidos los de cero ventas:
-    omitirlos dibujaria un negocio que no existe.</p>
-    <div class="chart" id="chart"></div>
-    <div class="axis" id="axis"></div>
-  </section>
-
-  <section>
-    <h2>Historico de precios</h2>
-    <p class="note">Reconstruido desde los pedidos. Cada control de precio compara contra el
-    tramo vigente el dia del pedido, no contra el precio de hoy.</p>
-    <div class="timeline">
-      {{PRECIOS}}
-    </div>
-  </section>
-
-  <section>
-    <h2>Controles de integridad</h2>
-    <p class="note">Cada control existe porque el error correspondiente ocurrio de verdad.
-    Se ejecutan en cada actualizacion y bloquean la publicacion si fallan.</p>
-    <div class="scroll">
-      <table>
-        <thead><tr><th>Control</th><th>Resultado</th></tr></thead>
-        <tbody>
-{{CONTROLES}}
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <footer>
-    <div>Fuente: Shopify Admin API, snapshot <code>{{SNAPSHOT}}</code>, permisos de solo lectura.
-    Cada cifra es reconstruible desde el snapshot crudo.</div>
-    <div>Generado por <code>publish.py</code> el {{GENERADO}}. Ninguna cifra de esta pagina
-    esta escrita a mano.</div>
-  </footer>
-
-</div>
-
-<script>
-  var meses = {{SERIE}};
-  var max = {{MAX_MES}};
-  var chart = document.getElementById("chart");
-  var axis = document.getElementById("axis");
-  meses.forEach(function (m) {
-    var bar = document.createElement("div");
-    bar.className = m[1] === 0 ? "bar zero" : "bar";
-    if (m[1] > 0) {
-      bar.style.height = (m[1] / max * 100) + "%";
-      var tag = document.createElement("span");
-      tag.textContent = m[1];
-      bar.appendChild(tag);
-    }
-    chart.appendChild(bar);
-    var label = document.createElement("span");
-    label.textContent = m[0];
-    axis.appendChild(label);
-  });
-</script>
+:root{--ink:#252a4a;--muted:#77809e;--canvas:#f6f7fc;--card:#fff;--accent:#5a4fe8;--accent-soft:#ecebff;--teal:#3e9f9a;--rule:#e6e9f3;--good:#167c68;--warn:#9a6814;--bad:#b54b55;--shadow:0 12px 30px rgba(40,44,100,.06);font-family:Inter,"Helvetica Neue",Arial,sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font-variant-numeric:tabular-nums}.shell{max-width:1440px;min-height:100vh;margin:auto;display:grid;grid-template-columns:220px 1fr;align-items:start}.sidebar{position:sticky;top:0;height:100vh;background:#fff;border-right:1px solid var(--rule);padding:34px 22px;display:flex;flex-direction:column;gap:44px}.brand{font-size:18px;font-weight:800;letter-spacing:-.7px;color:var(--accent)}.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:1.3px;margin-top:3px}.nav{display:grid;gap:8px}.nav button{border:0;background:transparent;text-align:left;padding:11px 13px;border-radius:9px;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}.nav button:hover,.nav button:focus-visible{background:#f4f4ff;color:var(--accent);outline:0}.nav button.active{background:var(--accent-soft);color:var(--accent);font-weight:700}.sidebar-note{margin-top:auto;padding:14px;border-radius:12px;background:linear-gradient(135deg,#6558ed,#4d44d4);color:#fff;font-size:11px;line-height:1.5}.main{padding:38px 44px 48px;display:flex;flex-direction:column;gap:18px;min-width:0}.topline{display:flex;justify-content:space-between;align-items:start;gap:18px}.eyebrow{font-size:12px;color:var(--muted);margin:0 0 5px}h1{font-size:30px;letter-spacing:-1.2px;margin:0}h2{font-size:16px;letter-spacing:-.25px;margin:0}.filters{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}.asof,.period,.range-input{font-size:12px;color:var(--muted);padding:10px 13px;background:#fff;border:1px solid var(--rule);border-radius:9px}.period,.range-input{font:inherit;color:var(--ink);cursor:pointer}.custom-range{display:flex;align-items:center;gap:6px}.custom-range[hidden]{display:none}.range-input{min-height:38px;padding:7px 9px}.range-separator{font-size:11px;color:var(--muted)}.range-apply{border:0;border-radius:8px;padding:9px 11px;background:var(--accent);color:#fff;font:inherit;font-size:11px;font-weight:700;cursor:pointer}.range-apply:hover{background:#4940d0}.range-error{width:100%;text-align:right;color:var(--bad);font-size:10px}.filter-bar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 18px}.filter-intro strong{display:block;font-size:12px}.filter-intro span{display:block;margin-top:3px;color:var(--muted);font-size:10px}.filter-options{display:flex;align-items:end;justify-content:flex-end;gap:9px;flex-wrap:wrap}.filter-options label{display:grid;gap:4px;color:var(--muted);font-size:10px}.filter-options .period{padding:7px 9px;font-size:11px}.summary-export{display:inline-flex;align-items:center;min-height:34px;text-decoration:none}.kpis{display:grid;grid-template-columns:1.2fr repeat(4,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:19px;box-shadow:var(--shadow)}.label{font-size:11px;color:var(--muted);margin-bottom:9px}.value{font-size:23px;font-weight:750;letter-spacing:-.8px}.detail{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.45}.primary{background:linear-gradient(135deg,#6358ed,#5147dc);border-color:transparent;color:#fff}.primary .label,.primary .detail{color:#e5e4ff}.goal,.grid,.controls{display:grid;grid-template-columns:1.65fr .9fr;gap:14px}.goal-card{min-height:142px}.section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}.progress{height:8px;background:#edeef8;border-radius:99px;overflow:hidden;margin:16px 0 8px}.progress i{display:block;height:100%;background:var(--accent);border-radius:99px}.goal-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}.goal-side{background:#f0f9fa;border-color:#d8eeee}.goal-side .value{color:#197a82}.trading,.promo-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.promo-kpis{grid-template-columns:repeat(3,1fr)}.trading .card{padding:16px 18px}.chart-card{min-height:315px}.chart{width:100%;height:235px}.legend{display:flex;gap:15px;font-size:11px;color:var(--muted)}.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}.sales{background:var(--accent)}.margin{background:var(--teal)}.mix{display:grid;gap:14px;margin-top:24px}.mix-row{display:grid;grid-template-columns:90px 1fr 70px;gap:9px;align-items:center;font-size:11px}.mix-bar{height:7px;background:#eef0f7;border-radius:99px;overflow:hidden}.mix-bar i{display:block;height:100%;border-radius:99px;background:var(--accent)}.mix-value{text-align:right;color:var(--muted)}.integrity{border-radius:14px;padding:15px 17px;display:flex;justify-content:space-between;gap:20px;align-items:start}.integrity b{font-size:13px}.integrity p,.integrity li{font-size:11px;line-height:1.45;color:var(--muted);margin:4px 0}.integrity ul{margin:8px 0 0;padding-left:18px}.integrity span{font-size:11px;font-weight:700;white-space:nowrap}.okay{background:#effaf7;border:1px solid #d8eee8}.okay span{color:var(--good)}.table-card{padding:0;overflow:hidden}.table-card .section-head{padding:20px 20px 4px}table{border-collapse:collapse;width:100%;font-size:12px}th{text-align:right;color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:12px 20px;border-bottom:1px solid var(--rule)}th:first-child,td:first-child{text-align:left}td{text-align:right;padding:13px 20px;border-bottom:1px solid var(--rule)}tr:last-child td{border-bottom:0}td strong{display:block;font-size:12px}td span{display:block;margin-top:2px;color:var(--muted);font-size:10px}.status,.pill{font-size:10px;padding:5px 8px;border-radius:99px;font-weight:700}.good,.healthy{background:#e7f7f2;color:var(--good)}.warning,.watch{background:#fff5dc;color:var(--warn)}.bad,.critical{background:#ffebec;color:var(--bad)}.controls .card{padding:0;overflow:hidden}.controls h2{padding:19px 20px}.controls td,.controls th{padding:10px 20px}.insight{display:flex;justify-content:space-between;align-items:center;gap:18px;background:#fbfbff}.insight p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.insight strong{font-size:13px}.bridge{display:flex;align-items:flex-end;gap:10px;padding:18px 20px 8px;height:190px}.bridge-step{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:6px;min-width:0}.bridge-bar{border-radius:6px 6px 0 0;background:var(--accent);opacity:.9}.bridge-step.loss .bridge-bar{background:#e0554f}.bridge-step.tax .bridge-bar{background:#b9bcd6}.bridge-step.result .bridge-bar{background:var(--teal)}.bridge-meta{font-size:10px;color:var(--muted);text-align:center;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bridge-meta b{display:block;color:var(--ink);font-size:12px}.cover-bar{height:6px;border-radius:3px;background:var(--rule);overflow:hidden;min-width:70px}.cover-bar i{display:block;height:100%;border-radius:3px;background:var(--teal)}.cover-bar i.watch{background:#e3a33c}.cover-bar i.critical{background:#d9534f}.spotlight{display:flex;justify-content:space-between;gap:18px;background:#f7fbfb}.spotlight p{margin:6px 0 0;color:var(--muted);font-size:12px}.clickable-row{cursor:pointer}.clickable-row:hover{background:#f6f6ff}.export{border:1px solid #d7d5ff;background:#fff;color:var(--accent);border-radius:8px;padding:7px 10px;font:inherit;font-size:11px;font-weight:700;cursor:pointer}.export:hover{background:var(--accent-soft)}.tab-panel[hidden]{display:none}footer{font-size:10px;color:var(--muted);padding:2px}@media(max-width:1020px){.shell{grid-template-columns:1fr}.sidebar{display:none}.main{padding:25px}.kpis{grid-template-columns:repeat(3,1fr)}.grid,.goal,.controls{grid-template-columns:1fr}}@media(max-width:650px){.main{padding:18px}.topline{display:block}.filters{margin-top:14px;justify-content:start}.custom-range{width:100%;flex-wrap:wrap}.range-input{flex:1;min-width:130px}.range-error{text-align:left}.filter-bar{display:block}.filter-options{margin-top:12px;justify-content:start}.kpis{grid-template-columns:1fr 1fr}.primary{grid-column:span 2}.trading,.promo-kpis{grid-template-columns:1fr 1fr}.insight,.spotlight{display:block}.mix-row{grid-template-columns:80px 1fr 58px}}
+.sankey{width:100%;height:240px;display:block;overflow:visible}.sankey text{font-family:Inter,"Helvetica Neue",Arial,sans-serif}</style></head><body><div class="shell"><aside class="sidebar"><div class="brand">{{BRAND_UPPER}}<small>PERFORMANCE</small></div><nav class="nav" aria-label="Dashboard navigation"><button class="active" data-tab="overview">Overview</button><button data-tab="sales">Sales performance</button><button data-tab="promotions">Promotions</button><button data-tab="products">Product economics</button><button data-tab="inventory">Inventory health</button><button data-tab="controls">Data controls</button></nav><div class="sidebar-note">{{SIDEBAR_NOTE}}</div></aside><main class="main"><div class="topline"><div><p class="eyebrow">{{BRAND}} · {{DOMAIN}}</p><h1 id="page-title">Profitable growth, at a glance.</h1></div><div class="filters"><select id="period" class="period" aria-label="Select reporting period"><option value="week">Last 7 trading days</option><option value="month">Last trading month</option><option value="all" selected>All time</option><option value="custom">Custom date range</option></select><div class="custom-range" id="custom-range" hidden><input class="range-input" id="range-start" type="date" aria-label="Range start date"><span class="range-separator">to</span><input class="range-input" id="range-end" type="date" aria-label="Range end date"><button class="range-apply" id="apply-range" type="button">Apply</button><span class="range-error" id="range-error" role="status"></span></div><div class="asof" id="asof">generated {{GENERATED}}</div></div></div><section class="filter-bar card" aria-label="Data filters"><div class="filter-intro"><strong>Refine the view</strong><span>Filters apply to commercial KPIs, charts and exports.</span></div><div class="filter-options"><label>SKU<select id="filter-sku" class="period"><option value="all">All SKUs</option></select></label><label>Product type<select id="filter-type" class="period"><option value="all">Products & bundles</option><option value="product">Products only</option><option value="bundle">Bundles only</option></select></label><label>Promotion<select id="filter-code" class="period"><option value="all">All promotion codes</option></select></label><a id="export-summary" class="export summary-export" href="{{EXECUTIVE_PDF}}" download>Download executive PDF</a></div></section>
+<section class="kpis"><div class="card primary"><div class="label">Gross sales</div><div class="value" data-metric="gross">{{GROSS_SALES}}</div><div class="detail" data-metric="sales-detail">{{TARGET_PROGRESS}} of {{TARGET}} annual target</div></div><div class="card"><div class="label">Contribution margin</div><div class="value" data-metric="margin">{{CONTRIBUTION_MARGIN}}</div><div class="detail" data-metric="margin-detail">{{MARGIN_PCT}} of net sales</div></div><div class="card"><div class="label">Orders</div><div class="value" data-metric="orders">{{ORDERS}}</div><div class="detail" data-metric="units">{{UNITS}} units sold</div></div><div class="card"><div class="label">Average order value</div><div class="value" data-metric="aov">{{AOV}}</div><div class="detail">Gross sales / unique order</div></div><div class="card"><div class="label" data-metric="trend-label">Latest month</div><div class="value" data-metric="trend-value">{{LATEST_MONTH}}</div><div class="detail" data-metric="trend-detail">{{MONTHLY_GROWTH}} vs prior month</div></div></section>
+<div class="tab-panel" data-panel="overview"><section class="insight card"><div><strong id="insight-title">Decision signal</strong><p id="insight-text">Loading selected-period insight.</p></div><span class="pill healthy" id="insight-status">Focus</span></section><section class="trading"><div class="card"><div class="label">Discount rate</div><div class="value" data-metric="discount-rate">{{DISCOUNT_RATE}}</div><div class="detail" data-metric="discount-detail">{{DISCOUNT_TOTAL}} given away · {{DISCOUNTED_SHARE}} of orders</div></div><div class="card"><div class="label">Units per order</div><div class="value" data-metric="upo">{{UNITS_PER_ORDER}}</div><div class="detail" data-metric="upo-detail">{{LINES_PER_ORDER}} lines per order</div></div><div class="card"><div class="label">Margin per order</div><div class="value" data-metric="mpo">{{MARGIN_PER_ORDER}}</div><div class="detail">Contribution after cost and VAT</div></div><div class="card"><div class="label">Run rate</div><div class="value">{{CURRENT_WEEKLY}}</div><div class="detail">units/week · {{REQUIRED_WEEKLY}} needed for target</div></div></section><section class="goal"><div class="card goal-card"><div><div class="section-head"><h2>Annual sales target</h2><span data-metric="target-progress">{{TARGET_PROGRESS}}</span></div><div class="progress"><i data-metric="target-bar" style="width:{{TARGET_PROGRESS_WIDTH}}%"></i></div><div class="goal-meta"><span data-metric="target-achieved">{{GROSS_SALES}} achieved</span><span>{{TARGET_GAP}} remaining</span></div></div><div class="detail">{{PACE_VERDICT}}</div></div><div class="card goal-side"><div class="label">Bundle-led revenue</div><div class="value" data-metric="bundle-sales">{{BUNDLE_SALES}}</div><div class="detail" data-metric="bundle-detail">{{BUNDLE_SHARE}} of gross sales · protects AOV and margin</div></div></section>{{ALERTS}}<section class="card chart-card"><div class="section-head"><h2>Sales momentum</h2><div class="legend"><span><i class="dot sales"></i>Gross sales</span><span><i class="dot margin"></i>Contribution margin</span></div></div><svg id="trend" class="chart" viewBox="0 0 760 250" preserveAspectRatio="none"></svg></section><section class="grid"><div class="card chart-card"><div class="section-head"><h2>From list price to contribution</h2><span id="sankey-period">all time</span></div><svg id="sankey" class="sankey" viewBox="0 0 760 295" role="img" aria-label="Revenue flow from list price to contribution margin"></svg><div class="detail">Where the money goes between list price and contribution.</div></div><div class="card"><div class="section-head"><h2>Product mix</h2><span>gross sales</span></div><div id="mix" class="mix"></div></div></section></div>
+<div class="tab-panel" data-panel="sales" hidden><section class="card chart-card"><div class="section-head"><h2>Sales performance</h2><span id="sales-period-label"></span></div><svg id="sales-trend" class="chart" viewBox="0 0 760 250" preserveAspectRatio="none"></svg></section><section class="trading"><div class="card"><div class="label">Gross sales</div><div class="value" data-metric="gross">{{GROSS_SALES}}</div><div class="detail">After customer discounts, including VAT.</div></div><div class="card"><div class="label">Discount investment</div><div class="value" data-metric="discount-total">{{DISCOUNT_TOTAL}}</div><div class="detail" data-metric="discount-rate-detail">{{DISCOUNT_RATE}} of listed value</div></div><div class="card goal-side"><div class="label">Contribution margin</div><div class="value" data-metric="margin">{{CONTRIBUTION_MARGIN}}</div><div class="detail" data-metric="margin-detail">{{MARGIN_PCT}} of net sales</div></div><div class="card"><div class="label">Comparable period</div><div class="value" data-metric="trend-value">{{LATEST_MONTH}}</div><div class="detail" data-metric="trend-detail">{{MONTHLY_GROWTH}} vs prior month</div></div></section></div>
+<div class="tab-panel" data-panel="promotions" hidden><section class="promo-kpis"><div class="card"><div class="label">Promotion-led sales</div><div class="value" id="promo-sales">—</div><div class="detail">gross sales after discounts</div></div><div class="card"><div class="label">Discount investment</div><div class="value" id="promo-discount">—</div><div class="detail" id="promo-rate">—</div></div><div class="card goal-side"><div class="label">Promotion contribution</div><div class="value" id="promo-margin">—</div><div class="detail" id="promo-orders">—</div></div></section><section class="card table-card"><div class="section-head"><h2>Promotion effectiveness</h2><span id="promo-period-label">Final allocations, not assumed rates</span></div><table><thead><tr><th>Discount code</th><th>Orders</th><th>Gross sales</th><th>Discount given</th><th>Effective rate</th><th>Contribution margin</th></tr></thead><tbody id="promo-rows"></tbody></table></section></div>
+<div class="tab-panel" data-panel="products" hidden><section class="spotlight card" id="product-spotlight"></section><section class="card table-card"><div class="section-head"><h2>Product economics</h2><div><button id="export-products" class="export" type="button">Export selected period CSV</button> <span id="product-period-label">Contribution margin excludes VAT</span></div></div><table><thead><tr><th>Product</th><th>Units</th><th>Gross sales</th><th>Contribution margin</th><th>Margin %</th></tr></thead><tbody id="product-rows">{{PRODUCT_ROWS}}</tbody></table></section></div>
+<div class="tab-panel" data-panel="inventory" hidden><section class="card table-card"><div class="section-head"><h2>Inventory health</h2><span>weeks of cover at the last 90 days’ pace</span></div><table><thead><tr><th>Product</th><th>Stock on hand</th><th>Sell-through</th><th>Weekly demand</th><th>Weeks of cover</th><th>Status</th></tr></thead><tbody>{{INVENTORY_ROWS}}</tbody></table></section><section class="card"><div class="detail">{{INVENTORY_NOTE}}</div></section></div>
+<div class="tab-panel" data-panel="controls" hidden><section class="controls"><div class="card"><h2>Integrity controls</h2><table><tbody>{{CONTROLS}}</tbody></table></div><div class="card"><h2>How discount checking works</h2><div class="detail" style="padding:0 20px 20px">The dashboard uses each line’s final allocated discount. In the Excel workflow, its code, percentage, active dates, and final euro allocation are checked against the Promotion rules table. Shopify imports retain their final allocation as the source of truth.</div></div></section></div>
+<footer>Source: editable Excel input or Shopify Admin API · snapshot <code>{{SNAPSHOT}}</code> · all figures are reproducible from raw order data.</footer></main></div><script>
+const daily={{DAILY_JSON}},allProducts={{PRODUCT_JSON}},annualTarget={{ANNUAL_TARGET_VALUE}},bundleSkus={{BUNDLE_SKUS_JSON}},cur='{{CURRENCY_SYMBOL}}',targetLabel='{{TARGET}}',generated='{{GENERATED}}';let currentPeriod='all',selectedSku=null,customRange=null,activeFilters={sku:'all',type:'all',code:'all'};
+const euro=value=>new Intl.NumberFormat('en-IE',{style:'currency',currency:'{{CURRENCY_CODE}}',maximumFractionDigits:2}).format(value||0),number=value=>new Intl.NumberFormat('en-IE').format(value||0),pct=value=>`${(value||0).toFixed(1)}%`,by=(key,value)=>document.querySelectorAll(`[data-metric="${key}"]`).forEach(node=>node.textContent=value);
+const dates=[...daily].map(row=>row.date).sort(),firstDate=dates[0],latestDate=dates[dates.length-1],dateAtDaysBefore=(date,days)=>{const d=new Date(`${date}T00:00:00Z`);d.setUTCDate(d.getUTCDate()-days);return d.toISOString().slice(0,10)},rangeDays=(start,end)=>Math.round((new Date(`${end}T00:00:00Z`)-new Date(`${start}T00:00:00Z`))/86400000)+1;
+function matchesFilters(row){if(activeFilters.sku!=='all'&&row.sku!==activeFilters.sku)return false;const type=bundleSkus.includes(row.sku)?'bundle':'product';if(activeFilters.type!=='all'&&type!==activeFilters.type)return false;return activeFilters.code==='all'||(row.code||'').split(',').map(code=>code.trim()).includes(activeFilters.code)}
+function rowsBetween(start,end){return daily.filter(row=>row.date>=start&&row.date<=end&&matchesFilters(row))}
+function periodRows(period,previous=false){if(period==='all')return daily.filter(matchesFilters);if(period==='custom'){if(!customRange)return[];if(!previous)return rowsBetween(customRange.start,customRange.end);const days=rangeDays(customRange.start,customRange.end),end=dateAtDaysBefore(customRange.start,1);return rowsBetween(dateAtDaysBefore(end,days-1),end)}let start,end=latestDate;if(period==='week'){start=dateAtDaysBefore(latestDate,previous?13:6);if(previous)end=dateAtDaysBefore(latestDate,7)}else{const latest=new Date(`${latestDate}T00:00:00Z`),daysIntoMonth=latest.getUTCDate(),month=new Date(Date.UTC(latest.getUTCFullYear(),latest.getUTCMonth()-(previous?1:0),1));start=month.toISOString().slice(0,10);if(previous){const lastDay=new Date(Date.UTC(month.getUTCFullYear(),month.getUTCMonth()+1,0)).getUTCDate();month.setUTCDate(Math.min(daysIntoMonth,lastDay));end=month.toISOString().slice(0,10)}}return rowsBetween(start,end)}
+function sum(rows,key){return rows.reduce((total,row)=>total+(row[key]||0),0)}function aggregate(rows){const gross=sum(rows,'gross'),net=sum(rows,'net'),margin=sum(rows,'margin'),units=sum(rows,'units'),discount=sum(rows,'discount'),orders=new Set(rows.map(row=>row.order)),discountedOrders=new Set(rows.filter(row=>row.code).map(row=>row.order)),listed=gross+discount;return{gross,net,margin,units,discount,orders:orders.size,lines:rows.length,discountedOrders:discountedOrders.size,listed,aov:orders.size?gross/orders.size:0,discountRate:listed?100*discount/listed:0,unitsPerOrder:orders.size?units/orders.size:0,linesPerOrder:orders.size?rows.length/orders.size:0,marginPerOrder:orders.size?margin/orders.size:0}}
+function productMetrics(rows){const map=new Map(allProducts.map(product=>[product.sku,{...product,units:0,gross:0,net:0,margin:0}]));rows.forEach(row=>{const product=map.get(row.sku);if(product)for(const key of ['units','gross','net','margin'])product[key]+=row[key]||0});return [...map.values()].filter(product=>product.gross).map(product=>({...product,marginPct:product.net?100*product.margin/product.net:0})).sort((a,b)=>b.gross-a.gross)}
+function promotionMetrics(rows){const map=new Map();rows.filter(row=>row.code).forEach(row=>{const code=row.code.split(',')[0].trim(),item=map.get(code)||{code,gross:0,discount:0,margin:0,orders:new Set()};item.gross+=row.gross;item.discount+=row.discount;item.margin+=row.margin;item.orders.add(row.order);map.set(code,item)});return [...map.values()].map(item=>({...item,orders:item.orders.size,rate:item.gross+item.discount?100*item.discount/(item.gross+item.discount):0})).sort((a,b)=>b.discount-a.discount)}
+function chartData(rows,period){const map=new Map();rows.forEach(row=>{const key=period==='all'?row.date.slice(0,7):row.date,value=map.get(key)||{key,gross:0,margin:0};value.gross+=row.gross;value.margin+=row.margin;map.set(key,value)});return [...map.values()].sort((a,b)=>a.key.localeCompare(b.key)).map(row=>({...row,label:period==='all'?new Date(`${row.key}-01T00:00:00Z`).toLocaleDateString('en-GB',{month:'short'}):new Date(`${row.key}T00:00:00Z`).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}))}
+function drawChart(id,series){const svg=document.getElementById(id);if(!svg)return;const W=760,H=250,p={l:10,r:10,t:18,b:34},max=Math.max(1,...series.map(row=>row.gross))*1.12,x=i=>series.length===1?W/2:p.l+i*(W-p.l-p.r)/(series.length-1),y=value=>H-p.b-value*(H-p.t-p.b)/max;let out='';[.25,.5,.75,1].forEach(f=>{const yy=y(max*f);out+=`<line x1="${p.l}" y1="${yy}" x2="${W-p.r}" y2="${yy}" stroke="#e8eaf4" stroke-dasharray="3 4"/><text x="${p.l}" y="${yy-5}" fill="#9aa0ba" font-size="9">${cur}${Math.round(max*f/1000)}k</text>`});const path=key=>series.map((row,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(row[key]).toFixed(1)}`).join(' '),area=path('gross')+` L${x(series.length-1)},${H-p.b} L${x(0)},${H-p.b} Z`;out+=`<path d="${area}" fill="#5a4fe8" opacity=".08"/><path d="${path('gross')}" fill="none" stroke="#5a4fe8" stroke-width="3" stroke-linecap="round"/><path d="${path('margin')}" fill="none" stroke="#3e9f9a" stroke-width="2.5" stroke-linecap="round"/>`;series.forEach((row,i)=>out+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" fill="#8b91ad" font-size="10">${row.label}</text>`);svg.innerHTML=out}
+function renderSpotlight(products){const product=products.find(item=>item.sku===selectedSku)||products[0],spotlight=document.getElementById('product-spotlight');if(!product){spotlight.innerHTML='<div><div class="label">Product spotlight</div><div class="value">No sales in this range</div><p>Choose dates with recorded orders to explore product economics.</p></div>';return}selectedSku=product.sku;spotlight.innerHTML=`<div><div class="label">Product spotlight · click a table row to change</div><div class="value">${product.name}</div><p>${product.sku} · ${number(product.units)} units · ${pct(product.marginPct)} contribution margin</p></div><div><div class="label">Contribution generated</div><div class="value">${euro(product.margin)}</div></div>`}
+function renderInsight(current,products,promos,growth){const title=document.getElementById('insight-title'),text=document.getElementById('insight-text'),status=document.getElementById('insight-status'),top=products[0],overallMargin=current.net?100*current.margin/current.net:0,lowest=[...products].sort((a,b)=>a.marginPct-b.marginPct)[0],topPromo=promos[0];const show=(headline,detail,label,kind)=>{title.textContent=headline;text.textContent=detail;status.textContent=label;status.className=`pill ${kind}`};if(!top){show('No sales in the selected period','Choose a period with recorded orders to generate a commercial observation.','No data','warning');return}if(lowest&&lowest.marginPct<0){show(`Loss-making sales: ${lowest.name}`,`${pct(lowest.marginPct)} contribution margin on ${euro(lowest.gross)} gross sales. Review its cost, price or bundle composition before increasing demand.`,'Action needed','bad');return}if(lowest&&lowest.marginPct<Math.max(30,overallMargin-18)){show(`Margin watch: ${lowest.name}`,`${pct(lowest.marginPct)} contribution margin is ${Math.max(0,overallMargin-lowest.marginPct).toFixed(1)} points below the selected portfolio average. It generated ${euro(lowest.gross)} in gross sales.`,'Review margin','warning');return}if(topPromo&&topPromo.rate>=14.9){show(`Promotion pressure: ${topPromo.code}`,`${euro(topPromo.discount)} was invested at a ${pct(topPromo.rate)} effective discount rate across ${number(topPromo.orders)} orders. Compare its margin with undiscounted demand before extending it.`,'Review promotion','warning');return}if(growth<=-10){show('Sales momentum has softened',`${pct(Math.abs(growth))} below the prior comparable period, while contribution margin is ${pct(overallMargin)}. Check traffic, conversion and promotion timing.`,'Watch trend','warning');return}const share=current.gross?100*top.gross/current.gross:0;show(`Top sales driver: ${top.name}`,`${euro(top.gross)} gross sales, ${share.toFixed(1)}% of the selected period, and ${pct(top.marginPct)} contribution margin.`,'Healthy','healthy')}
+function render(period){currentPeriod=period;const rows=periodRows(period),current=aggregate(rows),previous=aggregate(periodRows(period,true)),products=productMetrics(rows),promos=promotionMetrics(rows),bundle=products.filter(product=>bundleSkus.includes(product.sku)).reduce((total,product)=>total+product.gross,0),growth=previous.gross?100*(current.gross/previous.gross-1):0,progress=Math.min(100,100*current.gross/annualTarget),monthToDate=aggregate(periodRows('month')),priorMonthToDate=aggregate(periodRows('month',true)),trend=period==='all'?{value:monthToDate.gross,growth:priorMonthToDate.gross?100*(monthToDate.gross/priorMonthToDate.gross-1):0}:{value:current.gross,growth},labels={week:`7 days to ${latestDate}`,month:new Date(`${latestDate}T00:00:00Z`).toLocaleDateString('en-GB',{month:'long',year:'numeric'}),all:'All time · 12 months',custom:customRange?`${customRange.start} to ${customRange.end}`:'Custom date range'},label=labels[period];by('gross',euro(current.gross));by('margin',euro(current.margin));by('margin-detail',`${pct(current.net?100*current.margin/current.net:0)} of net sales`);by('orders',number(current.orders));by('units',`${number(current.units)} units sold`);by('aov',euro(current.aov));by('trend-label',period==='all'?'Month to date':'Period change');by('trend-value',euro(trend.value));by('trend-detail',`${trend.growth>=0?'+':''}${pct(trend.growth)} vs prior comparable period`);by('sales-detail',`${pct(progress)} of ${targetLabel} annual target`);by('target-progress',pct(progress));document.querySelectorAll('[data-metric="target-bar"]').forEach(node=>node.style.width=`${progress}%`);by('target-achieved',`${euro(current.gross)} in selected period`);by('discount-rate',pct(current.discountRate));by('discount-detail',`${euro(current.discount)} given away · ${pct(current.orders?100*current.discountedOrders/current.orders:0)} of orders`);by('discount-total',euro(current.discount));by('discount-rate-detail',`${pct(current.discountRate)} of listed value`);by('upo',current.unitsPerOrder.toFixed(2));by('upo-detail',`${current.linesPerOrder.toFixed(2)} lines per order`);by('mpo',euro(current.marginPerOrder));by('bundle-sales',euro(bundle));by('bundle-detail',`${pct(current.gross?100*bundle/current.gross:0)} of gross sales`);document.getElementById('asof').textContent=`${label} · generated ${generated}`;document.getElementById('sales-period-label').textContent=label;document.getElementById('sankey-period').textContent=label;document.getElementById('product-period-label').textContent=`${label} · contribution margin excludes VAT`;document.getElementById('promo-period-label').textContent=`${label} · final line allocations`;const mix=document.getElementById('mix'),top=Math.max(1,...products.map(product=>product.gross));mix.innerHTML=products.map(product=>`<div class="mix-row"><span>${product.name}</span><div class="mix-bar"><i style="width:${100*product.gross/top}%"></i></div><span class="mix-value">${euro(product.gross)}</span></div>`).join('');document.getElementById('product-rows').innerHTML=products.map(product=>`<tr class="clickable-row" data-sku="${product.sku}"><td><strong>${product.name}</strong><span>${product.sku}</span></td><td>${number(product.units)}</td><td>${euro(product.gross)}</td><td>${euro(product.margin)}</td><td>${pct(product.marginPct)}</td></tr>`).join('')||'<tr><td colspan="5">No product sales in this range.</td></tr>';renderSpotlight(products);const promoTotals={gross:sum(promos,'gross'),discount:sum(promos,'discount'),margin:sum(promos,'margin'),orders:sum(promos,'orders')};document.getElementById('promo-sales').textContent=euro(promoTotals.gross);document.getElementById('promo-discount').textContent=euro(promoTotals.discount);document.getElementById('promo-rate').textContent=`${pct(promoTotals.gross+promoTotals.discount?100*promoTotals.discount/(promoTotals.gross+promoTotals.discount):0)} of listed value`;document.getElementById('promo-margin').textContent=euro(promoTotals.margin);document.getElementById('promo-orders').textContent=`${number(promoTotals.orders)} promotion orders`;document.getElementById('promo-rows').innerHTML=promos.map(promo=>`<tr><td><strong>${promo.code}</strong></td><td>${number(promo.orders)}</td><td>${euro(promo.gross)}</td><td>${euro(promo.discount)}</td><td>${pct(promo.rate)}</td><td>${euro(promo.margin)}</td></tr>`).join('')||'<tr><td colspan="6">No discount codes in this period.</td></tr>';renderInsight(current,products,promos,trend.growth);window.drawSankey&&window.drawSankey(current);const series=chartData(rows,period==='custom'?'range':period);drawChart('trend',series);drawChart('sales-trend',series)}
+const titles={overview:'Profitable growth, at a glance.',sales:'Sales performance',promotions:'Promotions and discounts',products:'Product economics',inventory:'Inventory health',controls:'Data controls'},periodSelector=document.getElementById('period'),customRangeControl=document.getElementById('custom-range'),rangeStart=document.getElementById('range-start'),rangeEnd=document.getElementById('range-end'),rangeError=document.getElementById('range-error'),skuFilter=document.getElementById('filter-sku'),typeFilter=document.getElementById('filter-type'),codeFilter=document.getElementById('filter-code');rangeStart.min=rangeEnd.min=firstDate;rangeStart.max=rangeEnd.max=latestDate;rangeStart.value=firstDate;rangeEnd.value=latestDate;allProducts.forEach(product=>skuFilter.insertAdjacentHTML('beforeend',`<option value="${product.sku}">${product.sku} - ${product.name}</option>`));[...new Set(daily.flatMap(row=>(row.code||'').split(',').map(code=>code.trim()).filter(Boolean)))].sort().forEach(code=>codeFilter.insertAdjacentHTML('beforeend',`<option value="${code}">${code}</option>`));document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(item=>item.classList.toggle('active',item===button));document.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==button.dataset.tab);document.getElementById('page-title').textContent=titles[button.dataset.tab]}));function applyCustomRange(){const start=rangeStart.value,end=rangeEnd.value;if(!start||!end||start>end){rangeError.textContent='Choose a valid start and end date.';return}rangeError.textContent='';customRange={start,end};render('custom')}periodSelector.addEventListener('change',event=>{const custom=event.target.value==='custom';customRangeControl.hidden=!custom;if(custom)applyCustomRange();else{rangeError.textContent='';render(event.target.value)}});document.getElementById('apply-range').addEventListener('click',applyCustomRange);[skuFilter,typeFilter,codeFilter].forEach(control=>control.addEventListener('change',()=>{activeFilters={sku:skuFilter.value,type:typeFilter.value,code:codeFilter.value};render(currentPeriod)}));document.getElementById('product-rows').addEventListener('click',event=>{const row=event.target.closest('[data-sku]');if(row){selectedSku=row.dataset.sku;render(currentPeriod)}});document.getElementById('export-products').addEventListener('click',()=>{const rows=productMetrics(periodRows(currentPeriod)),csv=['Product,SKU,Units,Gross sales,Contribution margin,Margin %',...rows.map(row=>`"${row.name}",${row.sku},${row.units},${row.gross.toFixed(2)},${row.margin.toFixed(2)},${row.marginPct.toFixed(2)}`)].join('\n'),blob=new Blob([csv],{type:'text/csv'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=`product-economics-${currentPeriod}.csv`;link.click();URL.revokeObjectURL(link.href)});render('all');
+</script></body></html>

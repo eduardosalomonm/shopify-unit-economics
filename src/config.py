@@ -1,0 +1,74 @@
+"""Configuration loading and validation.
+
+The public demo deliberately uses JSON so a clean clone needs no runtime
+dependencies.  A private ``costs.yml`` remains supported for existing stores when
+PyYAML is installed locally.
+"""
+
+import json
+import os
+
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_COSTS = os.path.join(BASE, "costs.example.json")
+
+
+class ConfigError(Exception):
+    """The cost model cannot safely be used to calculate a margin."""
+
+
+def costs_path():
+    """Return an explicit local model, or the dependency-free public example."""
+    path = os.environ.get("COSTS_FILE", DEFAULT_COSTS)
+    return path if os.path.isabs(path) else os.path.join(BASE, path)
+
+
+def load_costs(path=None):
+    path = path or costs_path()
+    if not os.path.exists(path):
+        raise ConfigError("Cost model does not exist: %s" % path)
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            if path.lower().endswith(".json"):
+                costs = json.load(fh)
+            else:
+                try:
+                    import yaml
+                except ImportError:
+                    raise ConfigError(
+                        "The model %s is YAML. Install local support with "
+                        "python3 -m pip install PyYAML, or use the JSON example." % path
+                    )
+                try:
+                    costs = yaml.safe_load(fh)
+                except yaml.YAMLError as exc:
+                    raise ConfigError("Could not read %s: %s" % (path, exc))
+    except (OSError, ValueError) as exc:
+        raise ConfigError("Could not read %s: %s" % (path, exc))
+    validate_costs(costs, path)
+    return costs
+
+
+def validate_costs(costs, path="cost model"):
+    """Fail early with a useful message instead of producing plausible nonsense."""
+    if not isinstance(costs, dict):
+        raise ConfigError("%s must contain an object." % path)
+    required = ("productos", "objetivo")
+    missing = [key for key in required if key not in costs]
+    if missing:
+        raise ConfigError("%s is missing: %s" % (path, ", ".join(missing)))
+    if not isinstance(costs["productos"], dict) or not costs["productos"]:
+        raise ConfigError("%s needs at least one product." % path)
+    for sku, product in costs["productos"].items():
+        for field in ("nombre", "coste_unitario", "precio_web"):
+            if field not in product:
+                raise ConfigError("%s: product %s is missing %s." % (path, sku, field))
+        try:
+            if float(product["coste_unitario"]) < 0 or float(product["precio_web"]) < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise ConfigError("%s: costs and prices for %s must be non-negative numbers."
+                              % (path, sku))
+    objective = costs["objetivo"]
+    if not isinstance(objective, dict) or not all(k in objective for k in ("unidades", "desde", "hasta")):
+        raise ConfigError("%s: target needs units, start and end." % path)

@@ -16,7 +16,23 @@ import sys
 
 from shopify import Client, ShopifyError
 
-RAW_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.abspath(os.environ.get("PIPELINE_DATA_DIR", os.path.join(BASE, "data")))
+RAW_DIR = os.path.join(DATA_DIR, "raw")
+
+LINE_ITEM_FIELDS = """
+  id
+  title
+  sku
+  quantity
+  variant { id title }
+  product { id title }
+  originalUnitPriceSet { shopMoney { amount currencyCode } }
+  discountedUnitPriceSet { shopMoney { amount currencyCode } }
+  totalDiscountSet { shopMoney { amount currencyCode } }
+  discountAllocations { allocatedAmountSet { shopMoney { amount currencyCode } } }
+  taxable
+"""
 
 ORDERS_QUERY = """
 query($cursor: String, $query: String) {
@@ -39,26 +55,42 @@ query($cursor: String, $query: String) {
         # Sin customer: requiere read_customers (dato personal protegido) y el panel
         # no lo necesita. Si algun dia hace falta cohorte de cliente, sera en A5.
         lineItems(first: 50) {
+          pageInfo { hasNextPage endCursor }
           edges {
-            node {
-              id
-              title
-              sku
-              quantity
-              variant { id title }
-              product { id title }
-              originalUnitPriceSet { shopMoney { amount } }
-              discountedUnitPriceSet { shopMoney { amount } }
-              totalDiscountSet { shopMoney { amount } }
-              taxable
-            }
+            node { %s }
           }
         }
       }
     }
   }
 }
-"""
+""" % LINE_ITEM_FIELDS
+
+LINE_ITEMS_QUERY = """
+query($id: ID!, $cursor: String) {
+  order(id: $id) {
+    lineItems(first: 50, after: $cursor) {
+      pageInfo { hasNextPage endCursor }
+      edges { node { %s } }
+    }
+  }
+}
+""" % LINE_ITEM_FIELDS
+
+
+def fetch_remaining_line_items(client, order):
+    """Complete nested pagination so large orders are never silently truncated."""
+    line_items = order["lineItems"]
+    page = line_items.get("pageInfo") or {}
+    while page.get("hasNextPage"):
+        data = client.query(LINE_ITEMS_QUERY, {"id": order["id"], "cursor": page["endCursor"]})
+        next_page = data.get("order")
+        if not next_page:
+            raise ShopifyError("Could not retrieve additional line items for %s." % order["name"])
+        block = next_page["lineItems"]
+        line_items["edges"].extend(block["edges"])
+        page = block.get("pageInfo") or {}
+    line_items.pop("pageInfo", None)
 
 
 def fetch_orders(client, since=None):
@@ -71,9 +103,11 @@ def fetch_orders(client, since=None):
         data = client.query(ORDERS_QUERY, {"cursor": cursor, "query": query_filter})
         block = data["orders"]
         for edge in block["edges"]:
-            orders.append(edge["node"])
+            order = edge["node"]
+            fetch_remaining_line_items(client, order)
+            orders.append(order)
         page += 1
-        print("   pagina %d · %d pedidos acumulados" % (page, len(orders)))
+        print("   page %d · %d orders collected" % (page, len(orders)))
 
         if not block["pageInfo"]["hasNextPage"]:
             break
@@ -100,6 +134,8 @@ def summarise(orders):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--since", help="fecha ISO, p.ej. 2025-01-01")
+    parser.add_argument("--expected-units", type=int,
+                        help="reconciliacion opcional contra un total externo conocido")
     args = parser.parse_args()
 
     try:
@@ -108,11 +144,11 @@ def main():
         print("ERROR: %s" % exc)
         return 1
 
-    print("Extrayendo pedidos de %s" % client.store)
+    print("Extracting orders from %s" % client.store)
     try:
         orders = fetch_orders(client, args.since)
     except ShopifyError as exc:
-        print("ERROR en la extraccion: %s" % exc)
+        print("EXTRACTION ERROR: %s" % exc)
         return 1
 
     os.makedirs(RAW_DIR, exist_ok=True)
@@ -137,24 +173,31 @@ def main():
 
     print()
     print("Snapshot: %s" % path)
-    print("Pedidos totales: %d (validos, sin test ni cancelados: %d)" % (len(orders), len(live)))
-    print("Unidades vendidas: %d" % units)
-    print("Por SKU:")
+    print("Total orders: %d (valid, excluding tests and cancellations: %d)" % (len(orders), len(live)))
+    print("Units sold: %d" % units)
+    print("By SKU:")
     for sku in sorted(skus):
         print("   %-12s %d" % (sku, skus[sku]))
 
     print()
-    if units == 27:
-        print("RECONCILIACION OK: 27 unidades, coincide con el dato conocido.")
-        print("Siguiente fase: modelo de costes (costs.yml) y transform.py")
+    if args.expected_units is None:
+        print("RECONCILIATION PENDING: no external reference total was supplied.")
+        print("Compare these units with Shopify or your source of truth before publishing.")
+        print("To fail on a mismatch: --expected-units %d" % units)
+        print("Next: cost model and transform.py")
         return 0
 
-    print("RECONCILIACION NO CUADRA.")
-    print("Se esperaban 27 unidades y salen %d." % units)
-    print("No sigas a la fase 2 hasta entender la diferencia. Sospechosos habituales:")
-    print("  · la ventana de 60 dias (falta el scope read_all_orders)")
-    print("  · pedidos manuales o de Miravia que no estan en Shopify")
-    print("  · el dato de 27 esta desactualizado (es de agosto 2026)")
+    if units == args.expected_units:
+        print("RECONCILIATION OK: %d units match the known total." % units)
+        print("Next: cost model (costs.yml) and transform.py")
+        return 0
+
+    print("RECONCILIATION MISMATCH.")
+    print("Expected %d units but extracted %d." % (args.expected_units, units))
+    print("Do not continue to phase 2 until the difference is understood. Usual causes:")
+    print("  · the 60-day window (missing read_all_orders scope)")
+    print("  · manual or marketplace orders not present in Shopify")
+    print("  · an outdated external reference total")
     return 2
 
 

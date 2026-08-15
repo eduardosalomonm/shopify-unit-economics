@@ -3,12 +3,18 @@
 *.token
 
 # Real business data — the public repo runs on synthetic data only.
-# costs.yml carries supplier costs and margins; costs.example.yml is the template.
+# Local cost models carry supplier costs and margins. The tracked JSON example is
+# synthetic; private copies are intentionally ignored.
 costs.yml
+costs.private.json
 data/raw/
 data/*.db
 data/margins.csv
 panel.html
+docs/diagnostico.html
+data/costs-from-excel.json
+output/
+outputs/
 
 .DS_Store
 __pycache__/
