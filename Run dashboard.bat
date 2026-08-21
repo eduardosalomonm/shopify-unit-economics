@@ -7,13 +7,13 @@ echo ----------------------------------
 
 where py >nul 2>nul
 if not errorlevel 1 (
-  py -3 src\run_excel_dashboard.py
+  py -3 src\run_excel_dashboard.py --open
   goto check_result
 )
 
 where python >nul 2>nul
 if not errorlevel 1 (
-  python src\run_excel_dashboard.py
+  python src\run_excel_dashboard.py --open
   goto check_result
 )
 
@@ -27,9 +27,6 @@ exit /b 1
 
 :check_result
 if errorlevel 1 goto build_failed
-if not exist output\dashboard.html goto missing_output
-start "" output\dashboard.html
-echo Dashboard opened in your browser.
 exit /b 0
 
 :build_failed
@@ -37,10 +34,5 @@ echo.
 echo Dashboard could not be generated. The error above explains what to fix.
 echo For the shortest instructions, open TLDR.README\README.md.
 echo.
-pause
-exit /b 1
-
-:missing_output
-echo Dashboard could not be generated: output\dashboard.html is missing.
 pause
 exit /b 1

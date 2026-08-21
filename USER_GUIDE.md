@@ -45,8 +45,8 @@ Excel input needs attention; copy that complete message when asking for help.
 
 ## Choose a reporting period
 
-Use the period menu in the dashboard for the latest 7 days, latest month or all
-time. Select **Custom date range** to reveal two calendar inputs. Choose a start
+Use the period menu in the dashboard for the latest 7 calendar days, month to date
+or the complete imported period. Select **Custom date range** to reveal two calendar inputs. Choose a start
 and end date, then select **Apply**. Every tab, KPI, chart, promotion table and
 CSV export refreshes to that selected range. The period-change card compares the
 range with the immediately preceding range of the same length.
@@ -54,8 +54,14 @@ range with the immediately preceding range of the same length.
 Use the **Refine the view** bar to filter any selected range by SKU, product versus
 bundle, or promotion code. These filters refresh commercial KPIs, charts, product
 economics, promotions and the CSV export; Inventory health remains the latest
-stock-position view. 
-Use **Download executive PDF** for a compact all-time summary generated alongside
+stock-position view. The filter bar states the exact active scope; use **Reset
+view** to return to the complete period and remove every filter.
+
+The gross-sales benchmark remains global when a period, SKU or promotion filter
+is active, so a narrow slice is never presented as company-wide target progress.
+The unit target is separate and reports its own current and required weekly pace.
+
+Use **Download all-time PDF** for a compact complete-period summary generated alongside
 the dashboard as `output/executive-summary.pdf`.
 
 ## Input rules
@@ -115,7 +121,8 @@ the dashboard as `output/executive-summary.pdf`.
 | Discount rate | Share of list price given away, plus how many orders used a code. |
 | Units and lines per order | Basket size. A store at 1.00 has no attach at all. |
 | Margin per order | What one order is worth after cost and VAT. |
-| Run rate vs target | Units a week now, against the pace the target needs. |
+| Gross-sales benchmark | Complete imported-period sales against the declared benchmark; filters do not redefine it. |
+| Unit run rate vs target | Units a week now, against the pace the target window needs. |
 | From list price to contribution | Where the money goes: discounts, VAT, cost, what is left. |
 | Weeks of cover | How long stock lasts at the last 90 days of demand, bundles included. |
 
@@ -140,7 +147,8 @@ Use this when you want a different workbook or output file:
 ```bash
 python3 src/run_excel_dashboard.py \
   --input assets/unit-economics-input.xlsx \
-  --output output/dashboard.html
+  --output output/dashboard.html \
+  --open
 ```
 
 ## Shopify mode

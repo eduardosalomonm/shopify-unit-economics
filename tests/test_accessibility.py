@@ -40,6 +40,7 @@ class TestLaunchers(unittest.TestCase):
         self.assertTrue(os.stat(path).st_mode & stat.S_IXUSR)
         self.assertIn("command -v python3", script)
         self.assertIn("command -v python", script)
+        self.assertIn("--open", script)
         self.assertIn("Dashboard could not be generated", script)
         self.assertIn("Press Return", script)
 
@@ -49,6 +50,7 @@ class TestLaunchers(unittest.TestCase):
             script = handle.read()
         self.assertIn("where py", script)
         self.assertIn("where python", script)
+        self.assertIn("--open", script)
         self.assertIn("Dashboard could not be generated", script)
         self.assertIn("pause", script.lower())
 

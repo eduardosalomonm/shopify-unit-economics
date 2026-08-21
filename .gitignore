@@ -17,5 +17,6 @@ output/
 outputs/
 
 .DS_Store
+.pytest_cache/
 __pycache__/
 *.pyc

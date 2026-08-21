@@ -13,7 +13,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from transform import build_rows, catalogo, precio_catalogo  # noqa: E402
+from transform import build_rows, catalogo, contador_objetivo, precio_catalogo  # noqa: E402
 
 
 COSTS = {
@@ -128,6 +128,16 @@ class TestBundleCosting(unittest.TestCase):
         row = build_rows(order([("ZZZ", 1, 20.0)]), COSTS)[0]
         self.assertIsNone(row["coste_total"])
         self.assertIsNone(row["margen_contribucion"])
+
+
+class TestSnapshotTargetDate(unittest.TestCase):
+    def test_target_countdown_uses_latest_order_not_computer_clock(self):
+        rows = [{"fecha": "2026-03-01", "unidades": 4},
+                {"fecha": "2026-03-10", "unidades": 6}]
+        costs = {"objetivo": {"unidades": 100, "desde": "2026-01-01", "hasta": "2026-12-31"}}
+        target, sold, days, _start, _end, as_of = contador_objetivo(rows, costs)
+        self.assertEqual((target, sold, as_of), (100, 10, "2026-03-10"))
+        self.assertEqual(days, 296)
 
 
 if __name__ == "__main__":

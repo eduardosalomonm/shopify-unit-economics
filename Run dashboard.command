@@ -19,7 +19,7 @@ else
 fi
 
 echo "Using $DASHBOARD_PYTHON. Building the dashboard..."
-if ! "$DASHBOARD_PYTHON" src/run_excel_dashboard.py; then
+if ! "$DASHBOARD_PYTHON" src/run_excel_dashboard.py --open; then
   echo ""
   echo "Dashboard could not be generated. The error above explains what to fix."
   echo "For the shortest instructions, open TLDR.README/README.md."
@@ -27,12 +27,3 @@ if ! "$DASHBOARD_PYTHON" src/run_excel_dashboard.py; then
   read -r -p "Press Return to close..."
   exit 1
 fi
-
-if [ ! -f output/dashboard.html ]; then
-  echo "Dashboard could not be generated: output/dashboard.html is missing."
-  read -r -p "Press Return to close..."
-  exit 1
-fi
-
-open output/dashboard.html
-echo "Dashboard opened in your browser."

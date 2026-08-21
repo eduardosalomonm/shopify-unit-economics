@@ -375,6 +375,9 @@ def main():
     conn = sqlite3.connect(DB_PATH)
     monthly = monthly_metrics(conn)
     daily = daily_metrics(conn)
+    as_of_date = (datetime.datetime.strptime(daily[-1]["date"], "%Y-%m-%d").date()
+                  if daily else None)
+    data_through = as_of_date.strftime("%d %b %Y") if as_of_date else "No sales data"
     products = product_metrics(conn, costs)
     gross_sales = sum(row["gross"] for row in monthly)
     net_sales = sum(row["net"] for row in monthly)
@@ -390,7 +393,10 @@ def main():
     bundle_sales = sum(product["gross"] for product in products if product["sku"] in bundle_skus)
     trading = trading_metrics(conn)
     inventory = inventory_metrics(conn, costs)
-    projection = pace(costs, units_in_window(conn, costs))
+    # A snapshot must keep the same target outlook when rebuilt later. Use the
+    # latest order date as its commercial "today", not the computer clock.
+    projection = pace(costs, units_in_window(conn, costs),
+                      today=as_of_date or datetime.date(1970, 1, 1))
     currency_code = (costs.get("meta", {}) or {}).get("moneda", "EUR")
     global SYMBOL
     SYMBOL = SYMBOLS.get(currency_code, currency_code)
@@ -429,7 +435,9 @@ def main():
         "{{INVENTORY_ROWS}}": inventory_block(inventory),
         "{{INVENTORY_NOTE}}": html.escape(inventory_note(inventory)),
         "{{DOMAIN}}": html.escape(costs.get("meta", {}).get("dominio", "example.com")),
-        "{{GENERATED}}": datetime.date.today().strftime("%d %b %Y"),
+        # The label comes from the input rather than the computer clock. That is
+        # more useful to a reviewer and makes published artefacts reproducible.
+        "{{GENERATED}}": data_through,
         "{{GROSS_SALES}}": currency(gross_sales), "{{NET_SALES}}": currency(net_sales),
         "{{CONTRIBUTION_MARGIN}}": currency(contribution_margin),
         "{{MARGIN_PCT}}": percent(100 * contribution_margin / net_sales if net_sales else 0),

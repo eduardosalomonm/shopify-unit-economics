@@ -31,6 +31,10 @@ customer data or private dashboards.
 - Prefer a documented source for every cost, price, stock figure and discount rule.
 - Keep the static dashboard self-contained so GitHub Pages can serve it without a
   build step.
+- Keep publication reproducible: the same workbook must produce byte-identical
+  `docs/index.html` and `docs/executive-summary.pdf`.
+- Escape imported store text before inserting it into HTML and neutralise
+  formula-like text before writing spreadsheet-compatible exports.
 
 For private Shopify usage, use local `.env` and `costs.private.json` files. They
 are excluded from Git by design.

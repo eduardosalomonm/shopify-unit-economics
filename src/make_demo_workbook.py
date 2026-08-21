@@ -462,7 +462,7 @@ def target_chart_xml(gross, target):
         'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
         '<c:lang val="en-US"/><c:roundedCorners val="0"/><c:chart>%s'
         '<c:plotArea><c:layout/><c:doughnutChart><c:varyColors val="0"/><c:ser>'
-        '<c:idx val="0"/><c:order val="0"/><c:tx><c:v>Annual target</c:v></c:tx>'
+        '<c:idx val="0"/><c:order val="0"/><c:tx><c:v>Gross-sales benchmark</c:v></c:tx>'
         '<c:dPt><c:idx val="0"/><c:spPr><a:solidFill><a:srgbClr val="5A4FE8"/>'
         '</a:solidFill><a:ln><a:noFill/></a:ln></c:spPr></c:dPt>'
         '<c:dPt><c:idx val="1"/><c:spPr><a:solidFill><a:srgbClr val="E6E9F2"/>'
@@ -476,7 +476,7 @@ def target_chart_xml(gross, target):
         '</c:plotArea><c:legend><c:legendPos val="b"/><c:layout/><c:overlay val="0"/>'
         '</c:legend><c:plotVisOnly val="0"/><c:dispBlanksAs val="gap"/>'
         '<c:showDLblsOverMax val="0"/></c:chart></c:chartSpace>'
-        % (chart_title_xml("Annual gross-sales target"), string_cache(categories),
+        % (chart_title_xml("Gross-sales benchmark"), string_cache(categories),
            number_cache(values)))
 
 
@@ -493,7 +493,7 @@ DASHBOARD_DRAWING = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
  <xdr:twoCellAnchor>
   <xdr:from><xdr:col>7</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>18</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
   <xdr:to><xdr:col>14</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>34</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
-  <xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="3" name="Annual gross-sales target"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm/>
+  <xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="3" name="Gross-sales benchmark"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm/>
    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId2"/></a:graphicData></a:graphic>
   </xdr:graphicFrame><xdr:clientData/>
  </xdr:twoCellAnchor>
@@ -679,7 +679,7 @@ def build_workbook(path=OUTPUT, seed=11):
         ["Order lines", Formula(lines_formula, len(orders), PRIMARY)],
         ["Units sold", Formula("SUM(%s)" % quantity_range, units, PRIMARY)],
         [""],
-        ["Annual target", "Value"],
+        ["Gross-sales benchmark", "Value"],
         ["Gross sales target", Formula("'Settings'!B8", TARGET_SALES, CURRENCY_CALCULATED)],
         ["Progress", Formula("B10/B16", round(gross / TARGET_SALES, 4), PERCENT_CALCULATED)],
         ["Remaining", Formula("MAX(B16-B10,0)", target_remaining, CURRENCY_CALCULATED)],
@@ -689,8 +689,8 @@ def build_workbook(path=OUTPUT, seed=11):
                  "%s leads scenario gross sales at €%s." % (summary_metrics[top_sku]["name"], "{:,.0f}".format(summary_metrics[top_sku]["gross"])), CALCULATED)],
         [Formula('IF(COUNTIF(\'Pricing planner\'!G6:G9,"Below cost")+COUNTIF(\'Pricing planner\'!I13:I15,"Below cost")>0,"Price warning: at least one current offer is below cost. Review Pricing planner.","All current product and bundle prices are above cost.")',
                  "All current product and bundle prices are above cost.", CALCULATED)],
-        [Formula('IF(B17>=1,"Annual gross-sales target reached.",TEXT(B18,"€#,##0")&" remains to reach the annual target.")',
-                 "€%s remains to reach the annual target." % "{:,.0f}".format(target_remaining), CALCULATED)],
+        [Formula('IF(B17>=1,"Gross-sales benchmark reached.",TEXT(B18,"€#,##0")&" remains to reach the benchmark.")',
+                 "€%s remains to reach the benchmark." % "{:,.0f}".format(target_remaining), CALCULATED)],
         [""],
         ["Sales by SKU"],
         ["SKU", "Product", "Scenario gross sales", "Units", "Contribution margin", "Margin %"],

@@ -17,6 +17,8 @@ The project is designed for two use cases:
 **[User guide →](USER_GUIDE.md)** ·
 **[Contributing →](CONTRIBUTING.md)**
 
+![Luma Vale unit-economics dashboard overview](assets/dashboard-overview.png)
+
 ## Excel workflow
 
 Open [assets/unit-economics-input.xlsx](assets/unit-economics-input.xlsx), edit the
@@ -27,15 +29,16 @@ yellow cells, save, then double-click:
 
 It generates and opens `output/dashboard.html`. The included Luma Vale workbook
 holds a rolling 12 months of synthetic DTC trading — multi-line baskets, discount
-codes, seasonality, €83,755.43 gross sales and a €100,000 annual target — so anyone can evaluate the project
-without credentials or packages. The generated dashboard supports quick periods,
+codes, seasonality, €83,755.43 gross sales and a €100,000 gross-sales benchmark —
+so anyone can evaluate the project without credentials or packages. The generated dashboard supports quick periods,
 any custom calendar range, and filters for SKU, product/bundle type and promotion
-code. Its filter bar also includes a one-click executive PDF download.
+code. It keeps its navigation available on mobile, states the active filter scope,
+offers a one-click reset, and includes an all-time executive PDF download.
 
 The workbook starts on `Dashboard`, a formula-driven Excel companion with native
-charts for sales by SKU and progress against the annual target. It shows scenario
-sales, target progress, price health and product
-economics immediately, and explains that the polished interactive experience is
+charts for sales by SKU and progress against the gross-sales benchmark. It shows
+scenario sales, benchmark progress, price health and product economics immediately,
+and explains that the polished interactive experience is
 the [published online dashboard](https://eduardosalomonm.github.io/shopify-unit-economics/).
 In the default `Scenario` mode, yellow catalogue prices
 and promotion rates update the blue unit-price and discount cells in `Orders`, so
@@ -85,6 +88,10 @@ the checks and normal publication must fail.
 - **Final discount allocations.** Shopify’s allocated line discount is used when
   available, rather than reverse-engineering discounts from totals.
 - **Private data stays private.** The public workbook and demo data are synthetic.
+- **Safe store text.** Imported names, SKUs and promotion codes are escaped before
+  entering dashboard markup; spreadsheet exports neutralise formula-like text.
+- **Reproducible publication.** Dashboard and PDF dates come from the latest order
+  in the snapshot, so rebuilding the same workbook produces the same deliverables.
 - **Nothing is inferred that was not measured.** Stock on hand drives the inventory
   view; without it the tab says so instead of estimating stock from sales.
 

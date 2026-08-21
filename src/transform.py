@@ -269,9 +269,12 @@ def contador_objetivo(rows, costs):
     desde = desde.isoformat() if hasattr(desde, "isoformat") else str(desde)
     hasta = hasta.isoformat() if hasattr(hasta, "isoformat") else str(hasta)
     vendidas = sum(r["unidades"] for r in rows if desde <= r["fecha"] <= hasta)
-    hoy = datetime.date.today().isoformat()
-    dias = (datetime.date(*[int(p) for p in hasta.split("-")]) - datetime.date.today()).days
-    return objetivo["unidades"], vendidas, max(dias, 0), desde, hasta, hoy
+    # Target pacing belongs to the snapshot. Rebuilding an old snapshot next week
+    # must not silently change its reported outlook.
+    as_of = max((r["fecha"] for r in rows), default=desde)
+    as_of_date = datetime.date(*[int(p) for p in as_of.split("-")])
+    dias = (datetime.date(*[int(p) for p in hasta.split("-")]) - as_of_date).days
+    return objetivo["unidades"], vendidas, max(dias, 0), desde, hasta, as_of
 
 
 def main():
@@ -306,9 +309,9 @@ def main():
           % ("TOTAL", "", total_u, total_i, "", total_m,
              "%.1f" % (100.0 * total_m / total_i) if total_i else "-"))
 
-    meta, vendidas, dias, desde, hasta, hoy = contador_objetivo(rows, costs)
+    meta, vendidas, dias, desde, hasta, as_of = contador_objetivo(rows, costs)
     print()
-    print("TARGET %d units (%s to %s)" % (meta, desde, hasta))
+    print("TARGET %d units (%s to %s; data through %s)" % (meta, desde, hasta, as_of))
     print("   sold in window: %d · remaining: %d · days remaining: %d"
           % (vendidas, meta - vendidas, dias))
     if dias:
