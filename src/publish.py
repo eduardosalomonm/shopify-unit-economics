@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import checks  # noqa: E402
 from config import ConfigError, costs_path, load_costs  # noqa: E402
+from project_meta import version  # noqa: E402
 from transform import catalogo, latest_snapshot  # noqa: E402
 
 
@@ -63,7 +64,7 @@ def script_json(value):
     SKUs, product names and discount codes come from store data, so they can carry
     the characters that would close the tag early and turn data into markup.
     """
-    return (json.dumps(value)
+    return (json.dumps(value, allow_nan=False)
             .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026"))
 
 
@@ -408,6 +409,7 @@ def main():
     with open(TEMPLATE, "r", encoding="utf-8") as handle:
         page = handle.read()
     replacements = {
+        "{{APP_VERSION}}": html.escape(version()),
         "{{BRAND}}": html.escape(costs.get("meta", {}).get("marca", "Store")),
         "{{BRAND_UPPER}}": html.escape(costs.get("meta", {}).get("marca", "Store").upper()),
         "{{SIDEBAR_NOTE}}": ("<b>Public demo</b><br>All figures are synthetic and refresh from "

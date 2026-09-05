@@ -19,7 +19,7 @@ import os
 import sqlite3
 import sys
 
-from config import ConfigError, costs_path, load_costs
+from config import ConfigError, costs_path, load_costs, validate_finite_values
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.abspath(os.environ.get("PIPELINE_DATA_DIR", os.path.join(BASE, "data")))
@@ -47,6 +47,7 @@ def money(node, field):
     block = (node or {}).get(field) or {}
     shop_money = block.get("shopMoney") or {}
     amount = shop_money.get("amount")
+    validate_finite_values(amount, "amount")
     return float(amount) if amount is not None else None
 
 
@@ -135,6 +136,8 @@ def build_rows(snapshot, costs):
     2. Los precios de la tienda INCLUYEN IVA (taxesIncluded). Comparar un precio con
        IVA contra un coste sin IVA infla el margen. El margen se calcula ex IVA.
     """
+    validate_finite_values(snapshot)
+    validate_finite_values(costs)
     tipo_iva = float(costs.get("iva", {}).get("tipo_pct", 21.0))
     tabla = catalogo(costs)
     rows = []
@@ -204,6 +207,7 @@ def build_rows(snapshot, costs):
 
 
 def write_db(rows):
+    validate_finite_values(rows)  # Also catch arithmetic overflow before replacing data.
     os.makedirs(DATA_DIR, exist_ok=True)
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)   # se reconstruye siempre desde el snapshot crudo
@@ -288,7 +292,10 @@ def main():
         snapshot = json.load(fh)
 
     print("Snapshot: %s" % os.path.basename(path))
-    rows = build_rows(snapshot, costs)
+    try:
+        rows = build_rows(snapshot, costs)
+    except ConfigError as exc:
+        raise SystemExit("INPUT ERROR: %s" % exc) from None
     write_db(rows)
     filas = write_csv(rows, costs)
 

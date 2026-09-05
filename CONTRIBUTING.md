@@ -1,4 +1,4 @@
-# Contributing
+# Contributing to Margin Map
 
 Thanks for improving the project. The public repository must stay safe to clone,
 run and show in a portfolio: never add Shopify credentials, supplier costs, real
@@ -17,6 +17,7 @@ customer data or private dashboards.
 3. Run the verification suite:
 
    ```bash
+   python3 src/check_public_release.py --history
    python3 -m unittest discover -s tests -v
    ```
 

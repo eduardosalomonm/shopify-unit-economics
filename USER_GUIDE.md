@@ -1,4 +1,9 @@
-# User guide
+# Margin Map · User guide
+
+**Read the margin correctly:** it is product margin after discounts and VAT,
+minus declared product costs, not net profit. Shipping, payment fees, acquisition
+and overhead are excluded; reconcile refunds separately for any real-store use.
+Public demo figures are synthetic and are not achieved business results.
 
 For the shortest possible route, open [`TLDR.README/README.md`](TLDR.README/README.md).
 

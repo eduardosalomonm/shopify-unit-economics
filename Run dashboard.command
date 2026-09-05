@@ -2,8 +2,8 @@
 
 cd "$(dirname "$0")" || exit 1
 clear
-echo "Luma Vale unit-economics dashboard"
-echo "----------------------------------"
+echo "Margin Map - Luma Vale synthetic demo"
+echo "--------------------------------------"
 
 if command -v python3 >/dev/null 2>&1; then
   DASHBOARD_PYTHON="python3"

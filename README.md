@@ -1,9 +1,16 @@
-# Shopify unit-economics pipeline
+# Margin Map
 
-A Python pipeline that converts Shopify orders and a declared cost model into
+**E-commerce unit economics, from orders to margin.**
+
+Formerly A1 · Unit Economics. The project name has changed; repository paths,
+download filenames and the existing live-demo URL remain unchanged.
+
+Margin Map is a Python pipeline that converts Shopify orders and a declared cost model into
 contribution margin by SKU, bundle-price checks and a static dashboard. It was
 first built for a Shopify e-commerce store, then adapted into this
 credential-free public version so anyone can explore the workflow safely.
+
+Current public release: **v1.0.0**. See [CHANGELOG.md](CHANGELOG.md).
 
 The project is designed for two use cases:
 
@@ -17,7 +24,7 @@ The project is designed for two use cases:
 **[User guide →](USER_GUIDE.md)** ·
 **[Contributing →](CONTRIBUTING.md)**
 
-![Luma Vale unit-economics dashboard overview](assets/dashboard-overview.png)
+![Margin Map dashboard using the synthetic Luma Vale store](assets/dashboard-overview.png)
 
 ## Excel workflow
 
@@ -80,6 +87,21 @@ the checks and normal publication must fail.
 
 ## Design principles
 
+### Calculation scope
+
+The dashboard's contribution metric is **product margin**: sales after discounts
+and VAT, minus declared product costs. It is **not net profit**. Shipping, payment
+fees, acquisition and overhead are excluded; refunds and returned quantities need
+separate reconciliation before relying on a real-store report. No synthetic demo
+figure is a claim of achieved revenue or business impact. Margin Map is local
+decision support, not accounting or tax-reporting software.
+
+The public release is a synthetic demo and editable local workbook workflow, not
+a production SaaS or a verified integration for every Shopify store. See
+[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) before distributing a release.
+
+### Implementation guarantees
+
 - **Immutable raw snapshots.** Every number can be traced back to an extracted
   input file.
 - **No invented costs.** An unknown SKU produces an error, not a guessed margin.
@@ -134,6 +156,8 @@ Run dashboard.command / .bat      One-click Excel workflow launchers for macOS /
 README.md                         Project overview and quick start
 USER_GUIDE.md                     Step-by-step guide for non-technical users
 CONTRIBUTING.md                   Development and verification conventions
+CHANGELOG.md / VERSION            Public release history and current version
+RELEASE_CHECKLIST.md              Privacy, reproducibility and publication checks
 ```
 
 The pipeline creates its working files in ignored `data/` and `output/` folders.

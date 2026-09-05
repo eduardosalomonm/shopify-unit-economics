@@ -1,6 +1,13 @@
 # Credentials — never
 .env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 *.token
+*.pem
+*.key
 
 # Real business data — the public repo runs on synthetic data only.
 # Local cost models carry supplier costs and margins. The tracked JSON example is
@@ -9,14 +16,19 @@ costs.yml
 costs.private.json
 data/raw/
 data/*.db
+data/*.sqlite
+data/*.sqlite3
 data/margins.csv
 panel.html
 docs/diagnostico.html
 data/costs-from-excel.json
 output/
 outputs/
+tmp/
 
 .DS_Store
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
 __pycache__/
 *.pyc

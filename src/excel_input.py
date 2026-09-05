@@ -7,6 +7,7 @@ standard library only.
 """
 
 import json
+import math
 import re
 import xml.etree.ElementTree as ET
 import zipfile
@@ -102,9 +103,12 @@ def number(value, sheet_name, row_number, field, allow_blank=False):
     if str(value).strip() == "" and allow_blank:
         return None
     try:
-        return float(value)
-    except (TypeError, ValueError):
-        raise ExcelInputError("%s row %d: %s must be a number." % (sheet_name, row_number, field))
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError
+        return result
+    except (TypeError, ValueError, OverflowError):
+        raise ExcelInputError("%s row %d: %s must be a finite number." % (sheet_name, row_number, field)) from None
 
 
 def positive(value, sheet_name, row_number, field, allow_blank=False):
@@ -308,6 +312,6 @@ def build_inputs(path):
 def write_inputs(workbook_path, costs_path, snapshot_path):
     costs, snapshot = build_inputs(workbook_path)
     with open(costs_path, "w", encoding="utf-8") as handle:
-        json.dump(costs, handle, ensure_ascii=False, indent=2)
+        json.dump(costs, handle, ensure_ascii=False, indent=2, allow_nan=False)
     with open(snapshot_path, "w", encoding="utf-8") as handle:
-        json.dump(snapshot, handle, ensure_ascii=False, indent=2)
+        json.dump(snapshot, handle, ensure_ascii=False, indent=2, allow_nan=False)

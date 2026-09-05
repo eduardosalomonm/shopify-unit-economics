@@ -54,20 +54,21 @@ def mint_token(store, client_id, client_secret):
         with urllib.request.urlopen(request, timeout=DEFAULT_TIMEOUT) as response:
             body = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:500]
         if exc.code in (400, 401):
             raise ShopifyError(
                 "Could not obtain an access token (HTTP %s).\n"
                 "Common causes:\n"
                 "  · the app is not installed on the store\n"
                 "  · the Client ID or Secret is incorrect\n"
-                "  · the app and store are not in the same Shopify organization\n"
-                "Response: %s" % (exc.code, detail)
-            )
-        raise ShopifyError("HTTP %s while requesting the token: %s" % (exc.code, detail))
+                "  · the app and store are not in the same Shopify organization"
+                % exc.code
+            ) from None
+        raise ShopifyError("HTTP %s while requesting the token; response details withheld." % exc.code) from None
+    except (urllib.error.URLError, ValueError, OSError):
+        raise ShopifyError("Token request failed or returned invalid JSON; response details withheld.") from None
 
-    if "access_token" not in body:
-        raise ShopifyError("Unexpected token endpoint response: %s" % body)
+    if not isinstance(body, dict) or not isinstance(body.get("access_token"), str) or not body["access_token"]:
+        raise ShopifyError("Token endpoint did not return a usable access token; response details withheld.")
     return body
 
 
@@ -111,20 +112,25 @@ class Client:
                 if exc.code == 429 and attempt < retries - 1:
                     time.sleep(2 ** attempt)
                     continue
-                detail = exc.read().decode("utf-8", "replace")[:500]
-                raise ShopifyError("HTTP %s: %s" % (exc.code, detail))
+                raise ShopifyError("Shopify query failed (HTTP %s); response details withheld." % exc.code) from None
+            except (urllib.error.URLError, ValueError, OSError):
+                raise ShopifyError("Shopify query failed or returned invalid JSON; response details withheld.") from None
 
+            if not isinstance(body, dict):
+                raise ShopifyError("Unexpected Shopify response shape; response details withheld.")
             errors = body.get("errors")
             if errors:
                 # Retry throttling; other errors are real scope, syntax or field errors.
-                codes = {
-                    (e.get("extensions") or {}).get("code") for e in errors if isinstance(e, dict)
-                }
-                if "THROTTLED" in codes and attempt < retries - 1:
+                throttled = isinstance(errors, list) and any(
+                    isinstance(e, dict) and isinstance(e.get("extensions"), dict)
+                    and e["extensions"].get("code") == "THROTTLED" for e in errors)
+                if throttled and attempt < retries - 1:
                     time.sleep(2 + 2 * attempt)
                     continue
-                raise ShopifyError(json.dumps(errors, indent=2, ensure_ascii=False))
+                raise ShopifyError("Shopify reported query errors; check scopes and query schema. Response details withheld.")
 
+            if "data" not in body:
+                raise ShopifyError("Shopify response is missing data; response details withheld.")
             self._respect_throttle(body)
             return body["data"]
 

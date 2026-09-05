@@ -17,9 +17,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
+      - name: Guard public files and reachable history against private data
+        run: python3 src/check_public_release.py --history
       - name: Rebuild the demo workbook from source
         run: |
           python3 src/make_demo_workbook.py --output /tmp/workbook.xlsx

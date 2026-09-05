@@ -6,6 +6,7 @@ PyYAML is installed locally.
 """
 
 import json
+import math
 import os
 
 
@@ -15,6 +16,48 @@ DEFAULT_COSTS = os.path.join(BASE, "costs.example.json")
 
 class ConfigError(Exception):
     """The cost model cannot safely be used to calculate a margin."""
+
+
+NUMERIC_FIELDS = frozenset({
+    "ahorro_declarado", "amount", "cost", "coste_total", "coste_unitario",
+    "descuento_linea", "discount", "gross", "ingreso_con_iva", "ingreso_neto",
+    "iva_implicito", "iva_pedido_declarado", "margin", "margen_contribucion",
+    "margen_pct", "net", "objetivo_ventas_brutas", "porcentaje", "precio",
+    "precio_bruto", "precio_catalogo", "precio_web", "quantity", "stock",
+    "stock_on_hand", "sueltos_declarado", "tipo_pct", "tirada", "uds",
+    "unidades", "units",
+})
+
+
+def validate_finite_values(value, field=None):
+    """Reject non-finite numbers without treating store labels as numbers.
+
+    Errors intentionally omit input values and object keys, which can contain
+    private store data. Numeric strings are checked only for known numeric fields,
+    so a legitimate SKU or product name such as ``NaN`` remains valid text.
+    """
+    if isinstance(value, dict):
+        for key, item in value.items():
+            validate_finite_values(item, str(key).casefold())
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            validate_finite_values(item, field)
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            numeric = float(value)
+        except OverflowError:
+            raise ConfigError("Numeric inputs must be finite and within supported range.") from None
+        if not math.isfinite(numeric):
+            raise ConfigError("Numeric inputs must be finite; NaN and infinity are not supported.")
+    elif isinstance(value, str) and field in NUMERIC_FIELDS:
+        try:
+            numeric = float(value)
+        except ValueError:
+            return  # The schema-specific validator will report malformed numbers.
+        except OverflowError:
+            raise ConfigError("Numeric inputs must be finite and within supported range.") from None
+        if not math.isfinite(numeric):
+            raise ConfigError("Numeric inputs must be finite; NaN and infinity are not supported.")
 
 
 def costs_path():
@@ -51,6 +94,7 @@ def load_costs(path=None):
 
 def validate_costs(costs, path="cost model"):
     """Fail early with a useful message instead of producing plausible nonsense."""
+    validate_finite_values(costs)
     if not isinstance(costs, dict):
         raise ConfigError("%s must contain an object." % path)
     required = ("productos", "objetivo")

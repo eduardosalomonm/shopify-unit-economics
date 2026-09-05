@@ -2,8 +2,8 @@
 setlocal
 cd /d "%~dp0"
 
-echo Luma Vale unit-economics dashboard
-echo ----------------------------------
+echo Margin Map - Luma Vale synthetic demo
+echo --------------------------------------
 
 where py >nul 2>nul
 if not errorlevel 1 (

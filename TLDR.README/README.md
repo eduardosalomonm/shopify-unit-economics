@@ -1,4 +1,4 @@
-# TL;DR — open the project
+# Margin Map · 60-second setup
 
 ## I only want to see the finished dashboard
 
