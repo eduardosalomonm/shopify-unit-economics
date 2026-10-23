@@ -7,6 +7,7 @@ All notable public changes to Margin Map are recorded here.
 - Added optional variable costs (fulfilment, shipping charged, payment fees and monthly
   advertising) and a result after variable costs across the overview, products,
   promotions, trend chart, CSV export, insights and executive PDF.
+- Added the same breakdown to the workbook's live `Dashboard` sheet.
 - Added a break-even discount per product and catalogue bundle.
 - Added a variable-cost allocation control that reports advertising with no sales to land on.
 - Excel builds now run in an isolated temporary folder and keep the previous report on failure.

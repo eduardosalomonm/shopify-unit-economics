@@ -12,6 +12,7 @@ import os
 import sqlite3
 import sys
 import unittest
+import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
@@ -19,7 +20,8 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 import checks  # noqa: E402
 import publish  # noqa: E402
 from config import ConfigError, validate_costs, variable_costs  # noqa: E402
-from excel_input import ExcelInputError, build_inputs, variable_cost_inputs  # noqa: E402
+from excel_input import (ExcelInputError, build_inputs, read_sheet, sheet_paths,  # noqa: E402
+                         shared_strings, variable_cost_inputs)
 from transform import build_rows, repartir  # noqa: E402
 
 WORKBOOK = os.path.join(ROOT, "assets", "unit-economics-input.xlsx")
@@ -155,6 +157,19 @@ class TestWorkbook(unittest.TestCase):
             charged[item["name"]] = charged.get(item["name"], 0) + amount
         self.assertEqual(len(set(charged.values())), 1)
         self.assertGreater(next(iter(charged.values())), 0)
+
+    def test_excel_dashboard_sheet_follows_the_settings_costs(self):
+        with zipfile.ZipFile(WORKBOOK) as archive:
+            path = sheet_paths(archive)["Dashboard"]
+            xml = archive.read(path).decode("utf-8")
+            rows = read_sheet(archive, path, shared_strings(archive))
+        self.assertEqual(rows[14][3], "After variable costs")
+        self.assertIn("<f>E10+E11-E12-E13-E14</f>", xml)
+        for setting in ("'Settings'!B12", "'Settings'!B13", "'Settings'!B14", "'Settings'!B15"):
+            self.assertIn(setting, xml)
+        # The cached result shown before Excel recalculates matches its own parts.
+        parts = [float(rows[index][4]) for index in range(9, 15)]
+        self.assertAlmostEqual(parts[0] + parts[1] - parts[2] - parts[3] - parts[4], parts[5], places=2)
 
     def test_blank_settings_keep_the_product_margin_dashboard(self):
         self.assertEqual(variable_cost_inputs({}, [["Setting", "Value"]]), (None, 0.0))

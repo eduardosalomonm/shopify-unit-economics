@@ -569,7 +569,7 @@ def build_workbook(path=OUTPUT, seed=11):
         ["Start with Dashboard. Edit yellow cells only; blue and purple cells calculate automatically."],
         [""],
         ["Sheet", "What it is for"],
-        ["Dashboard", "Live, formula-driven Excel companion. The polished interactive dashboard is online."],
+        ["Dashboard", "Live, formula-driven Excel companion, including what remains after variable costs. The polished interactive dashboard is online."],
         ["Settings", "Store identity, VAT rate, targets, pricing mode and optional fulfilment, payment and advertising costs."],
         ["Catalogue", "Products and bundles together. Use Type to distinguish them."],
         ["Pricing & promotions", "Price history and the discount rules that drive calculated order discounts."],
@@ -723,6 +723,45 @@ def build_workbook(path=OUTPUT, seed=11):
         ["Sales by SKU"],
         ["SKU", "Product", "Scenario gross sales", "Units", "Contribution margin", "Margin %"],
     ]
+    # Variable costs sit beside the commercial picture in D9:E17, clear of the
+    # charts (H onwards), so no existing row or chart reference moves. Cells follow
+    # the Settings inputs, so the block updates as soon as a cost is edited.
+    advertising = advertising_plan(orders)
+    advertising_range = "'Settings'!$B$19:$B$%d" % max(60, 18 + len(advertising))
+    orders_formula = "SUMPRODUCT(1/COUNTIF(%s,%s))" % (order_range, order_range)
+    # Like the pipeline, shipping ex VAT is rounded to the cent per order.
+    shipping_ex_vat = round(round(SHIPPING_CHARGED / (1 + VAT / 100), 2) * order_count, 2)
+    fulfilment = round(FULFILMENT_PER_ORDER * order_count, 2)
+    fees = round(PAYMENT_FEE_PCT / 100 * (gross + SHIPPING_CHARGED * order_count)
+                 + PAYMENT_FEE_FIXED * order_count, 2)
+    advertising_total = sum(spend for _month, spend in advertising)
+    after = round(total_margin + shipping_ex_vat - fulfilment - fees - advertising_total, 2)
+    net_total = sum(round(scenario_amount(order) / (1 + VAT / 100), 2) for order in orders)
+    variable_block = {
+        9: ["After variable costs", "Value"],
+        10: [Styled("Contribution margin", CALCULATED), Formula("B11", total_margin, CURRENCY_CALCULATED)],
+        11: [Styled("+ Shipping charged ex VAT", CALCULATED),
+             Formula("ROUND(ROUND('Settings'!B13/(1+'Settings'!B6/100),2)*%s,2)" % orders_formula,
+                     shipping_ex_vat, CURRENCY_CALCULATED)],
+        12: [Styled("- Fulfilment", CALCULATED),
+             Formula("ROUND('Settings'!B12*%s,2)" % orders_formula, fulfilment, CURRENCY_CALCULATED)],
+        13: [Styled("- Payment fees", CALCULATED),
+             Formula("ROUND('Settings'!B14/100*(B10+'Settings'!B13*%s)+'Settings'!B15*%s,2)"
+                     % (orders_formula, orders_formula), fees, CURRENCY_CALCULATED)],
+        14: [Styled("- Advertising", CALCULATED),
+             Formula("SUM(%s)" % advertising_range, advertising_total, CURRENCY_CALCULATED)],
+        15: [Styled("After variable costs", PRIMARY),
+             Formula("E10+E11-E12-E13-E14", after, PRIMARY_CURRENCY)],
+        16: [Styled("Share of net sales", CALCULATED),
+             Formula("IF(SUM(%s)=0,0,E15/SUM(%s))" % (net_revenue_range, net_revenue_range),
+                     round(after / net_total, 4) if net_total else 0, PERCENT_CALCULATED)],
+        17: [Styled("Costs come from Settings. Not net profit.", NOTE), ""],
+    }
+    for excel_row, cells in variable_block.items():
+        row = dashboard[excel_row - 1]
+        row.extend([""] * (3 - len(row)))
+        row[3:5] = cells
+
     for index, sku in enumerate(("SKU-A", "SKU-B", "SKU-C", "SKU-F", "SKU-D", "SKU-E", "SKU-G"), start=27):
         row = catalogue_rows[sku]
         item = summary_metrics[sku]
@@ -850,7 +889,7 @@ def build_workbook(path=OUTPUT, seed=11):
 
     sheets = [
         ("Dashboard", sheet_xml(dashboard, summary_styling,
-                                [20, 48, 22, 14, 24, 16, 4, 14, 14, 14, 14, 14, 14, 14],
+                                [20, 48, 22, 28, 18, 16, 4, 14, 14, 14, 14, 14, 14, 14],
                                 hide_gridlines=True, drawing=True,
                                 hidden_rows=(35, 36, 37)),),
         ("Read me", sheet_xml(readme, readme_styling, [36, 92]),),

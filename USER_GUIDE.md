@@ -129,6 +129,10 @@ only after product cost. Leave them all blank to keep the product-margin view.
 | `Payment fee (%)` and `Payment fee per order` | Your payment provider's rate, for example `1.5` and `0.25`. |
 | `Advertising by month` table | One row per month, `YYYY-MM` and the spend ex VAT. |
 
+The workbook's `Dashboard` sheet shows the same breakdown beside the commercial
+picture and updates as soon as you edit these cells. It can differ from the online
+dashboard by a few cents, because the online version rounds payment fees order by order.
+
 Per-order amounts are shared across an order's lines by value. Advertising is shared
 across a month's lines by net revenue. A month of advertising with no sales is
 listed under **Data controls**, because it has nothing to be allocated to.
