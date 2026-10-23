@@ -150,6 +150,54 @@ def money(amount):
     return {"shopMoney": {"amount": "%.2f" % amount, "currencyCode": "EUR"}}
 
 
+VARIABLE_SETTINGS = {
+    "Fulfilment cost per order ex VAT": "logistica_por_pedido",
+    "Payment fee (%)": "comision_pago_pct",
+    "Payment fee per order": "comision_pago_fija",
+}
+SHIPPING_SETTING = "Shipping charged per order incl VAT"
+ADVERTISING_HEADERS = ["Month (YYYY-MM)", "Advertising spend ex VAT"]
+
+
+def variable_cost_inputs(settings, settings_rows):
+    """Optional Settings that move the dashboard from product margin towards profit.
+
+    Every value may be left blank. When none is filled in and no advertising is
+    listed, the workbook produces exactly the product-margin dashboard it did before.
+    """
+    model = {}
+    for label, field in VARIABLE_SETTINGS.items():
+        value = number(settings.get(label, ""), "Settings", 0, label, allow_blank=True)
+        if value is not None:
+            if value < 0 or (field == "comision_pago_pct" and value >= 100):
+                raise ExcelInputError("Settings %s must be zero or more%s." % (
+                    label, " and below 100" if field == "comision_pago_pct" else ""))
+            model[field] = value
+    shipping = number(settings.get(SHIPPING_SETTING, ""), "Settings", 0, SHIPPING_SETTING,
+                      allow_blank=True)
+    if shipping is not None and shipping < 0:
+        raise ExcelInputError("Settings %s must be zero or more." % SHIPPING_SETTING)
+
+    advertising = {}
+    if any(all(header in row for header in ADVERTISING_HEADERS) for row in settings_rows):
+        for offset, row in enumerate(table(settings_rows, "Settings", ADVERTISING_HEADERS), start=1):
+            month = str(row["Month (YYYY-MM)"]).strip()
+            if not re.match(r"^\d{4}-(0[1-9]|1[0-2])$", month):
+                raise ExcelInputError("Settings advertising row %d: Month must use YYYY-MM." % offset)
+            if month in advertising:
+                raise ExcelInputError("Settings advertising row %d: %s is listed twice." % (offset, month))
+            spend = number(row["Advertising spend ex VAT"], "Settings advertising", offset,
+                           "Advertising spend ex VAT", allow_blank=True) or 0.0
+            if spend < 0:
+                raise ExcelInputError("Settings advertising row %d: spend cannot be negative." % offset)
+            advertising[month] = spend
+    if advertising:
+        model["publicidad"] = advertising
+    if shipping:
+        model.setdefault("logistica_por_pedido", 0.0)
+    return (model or None), (shipping or 0.0)
+
+
 def load_workbook(path):
     try:
         with zipfile.ZipFile(path) as archive:
@@ -175,6 +223,7 @@ def build_inputs(path):
     missing = [key for key in required_settings if not str(settings.get(key, "")).strip()]
     if missing:
         raise ExcelInputError("Settings is missing values for: %s." % ", ".join(missing))
+    variable_model, shipping_charged = variable_cost_inputs(settings, sheets["Settings"])
     pricing_model = str(settings.get("Pricing model", "Actual")).strip().lower()
     if pricing_model not in ("scenario", "actual"):
         raise ExcelInputError("Settings Pricing model must be either Scenario or Actual.")
@@ -268,6 +317,7 @@ def build_inputs(path):
                        "Unit price incl VAT", "Quantity", "Discount allocated incl VAT",
                        "Taxable (TRUE/FALSE)"], optional=("Discount code",))
     orders = []
+    charged_shipping = set()
     for offset, row in enumerate(order_rows, start=4):
         order_id = str(row["Order ID"]).strip()
         sku = str(row["SKU"]).strip()
@@ -276,6 +326,12 @@ def build_inputs(path):
         price = positive(row["Unit price incl VAT"], "Orders", offset, "Unit price incl VAT")
         quantity = int(positive(row["Quantity"], "Orders", offset, "Quantity"))
         discount = number(row["Discount allocated incl VAT"], "Orders", offset, "Discount allocated incl VAT", True) or 0.0
+        # Each Excel row becomes its own order object, so the per-order shipping
+        # charge goes on the first row of an order only.
+        shipping = 0.0
+        if shipping_charged and order_id not in charged_shipping:
+            charged_shipping.add(order_id)
+            shipping = shipping_charged
         orders.append({
             "id": "excel:%s:%d" % (order_id, offset), "name": order_id,
             "createdAt": "%sT12:00:00Z" % str(row["Order date"]).strip(), "cancelledAt": None,
@@ -283,7 +339,7 @@ def build_inputs(path):
             "discountCodes": ([str(row["Discount code"]).strip()]
                               if str(row.get("Discount code", "")).strip() else []),
             "currentTotalDiscountsSet": money(discount),
-            "currentTotalTaxSet": money(0.0), "totalShippingPriceSet": money(0.0),
+            "currentTotalTaxSet": money(0.0), "totalShippingPriceSet": money(shipping),
             "lineItems": {"edges": [{"node": {
                 "id": "excel-line:%d" % offset, "title": str(row["Product title"]).strip(), "sku": sku,
                 "quantity": quantity, "variant": None, "product": None,
@@ -306,6 +362,8 @@ def build_inputs(path):
         "objetivo": {"unidades": int(number(settings["Target units"], "Settings", 0, "Target units")),
                      "desde": str(settings["Target start"]), "hasta": str(settings["Target end"])},
     }
+    if variable_model is not None:
+        costs["costes_variables"] = variable_model
     return costs, {"extraido": "from editable Excel workbook", "tienda": settings["Store domain"], "pedidos": orders}
 
 

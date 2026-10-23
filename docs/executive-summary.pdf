@@ -10,29 +10,30 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
 endobj
 4 0 obj
-<< /Length 5846 >>
+<< /Length 6196 >>
 stream
 0.353 0.310 0.910 rg 0 770 595 72 re f
 BT /F2 19 Tf 1.000 1.000 1.000 rg 1 0 0 1 42 805 Tm (Margin Map | Executive summary) Tj ET
-BT /F1 9 Tf 0.910 0.906 1.000 rg 1 0 0 1 42 785 Tm (Luma Vale synthetic demo - 2025-08-22 to 2026-08-21 - data through 2026-08-21) Tj ET
+BT /F1 9 Tf 0.910 0.906 1.000 rg 1 0 0 1 42 785 Tm (Luma Vale synthetic demo - 2025-10-22 to 2026-10-22 - data through 2026-10-22) Tj ET
 BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 740 Tm (Commercial performance) Tj ET
 0.969 0.969 0.988 rg 42 668 120 55 re f
 BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 52 704 Tm (Gross sales) Tj ET
 BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 52 682 Tm (EUR 83,755) Tj ET
 0.969 0.969 0.988 rg 174 668 120 55 re f
 BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 184 704 Tm (Contribution margin) Tj ET
-BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 184 682 Tm (EUR 51,296) Tj ET
+BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 184 682 Tm (EUR 51,319) Tj ET
 0.969 0.969 0.988 rg 306 668 120 55 re f
-BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 316 704 Tm (Orders) Tj ET
-BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 316 682 Tm (876) Tj ET
+BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 316 704 Tm (Margin rate) Tj ET
+BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 316 682 Tm (74.1%) Tj ET
 0.969 0.969 0.988 rg 438 668 120 55 re f
-BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 448 704 Tm (Margin rate) Tj ET
-BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 448 682 Tm (74.1%) Tj ET
+BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 448 704 Tm (After variable costs) Tj ET
+BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 448 682 Tm (EUR 35,167) Tj ET
 BT /F2 11 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 638 Tm (Gross sales benchmark) Tj ET
 BT /F1 9 Tf 0.467 0.502 0.620 rg 1 0 0 1 405 638 Tm (83.8% of EUR 100,000) Tj ET
 0.910 0.918 0.957 rg 42 619 510 8 re f
 0.353 0.310 0.910 rg 42 619 427.152693 8 re f
-BT /F1 9 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 594 Tm (1,342 units sold | EUR 4,681 discount investment \(5.3% of list price\)) Tj ET
+BT /F1 9 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 594 Tm (1,358 units sold | 891 orders | EUR 4,622 discount investment \(5.2% of list price\)) Tj ET
+BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 578 Tm (Margin EUR 51,319 + shipping 2,174 - fulfilment 4,811 - fees 1,518 - ads 11,997 = EUR 35,167 after variable costs) Tj ET
 BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 552 Tm (Top product economics) Tj ET
 BT /F2 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 532 Tm (PRODUCT) Tj ET
 BT /F2 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 295 532 Tm (GROSS SALES) Tj ET
@@ -40,29 +41,29 @@ BT /F2 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 415 532 Tm (CONTRIBUTION) Tj ET
 BT /F2 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 515 532 Tm (MARGIN) Tj ET
 0.902 0.914 0.953 rg 42 504 510 1 re f
 BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 512 Tm (SKU-A - Renewal Serum) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 512 Tm (EUR 26,869) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 512 Tm (EUR 17,035) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 512 Tm (EUR 26,205) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 512 Tm (EUR 16,601) Tj ET
 BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 512 Tm (76.7%) Tj ET
 0.902 0.914 0.953 rg 42 477 510 1 re f
 BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 485 Tm (SKU-D - Daily Duo) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 485 Tm (EUR 20,445) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 485 Tm (EUR 12,355) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 485 Tm (73.1%) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 485 Tm (EUR 19,600) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 485 Tm (EUR 11,823) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 485 Tm (73.0%) Tj ET
 0.902 0.914 0.953 rg 42 450 510 1 re f
 BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 458 Tm (SKU-E - Complete Ritual) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 458 Tm (EUR 18,027) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 458 Tm (EUR 10,985) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 458 Tm (73.7%) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 458 Tm (EUR 19,598) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 458 Tm (EUR 11,974) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 458 Tm (73.9%) Tj ET
 0.902 0.914 0.953 rg 42 423 510 1 re f
 BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 431 Tm (SKU-G - Daily Reset Set) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 431 Tm (EUR 11,851) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 431 Tm (EUR 6,866) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 431 Tm (70.1%) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 431 Tm (EUR 11,306) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 431 Tm (EUR 6,559) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 431 Tm (70.2%) Tj ET
 0.902 0.914 0.953 rg 42 396 510 1 re f
-BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 404 Tm (SKU-F - Cloud Cleanser) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 404 Tm (EUR 2,603) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 404 Tm (EUR 1,608) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 404 Tm (74.8%) Tj ET
+BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 404 Tm (SKU-B - Barrier Balm) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 295 404 Tm (EUR 2,713) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 415 404 Tm (EUR 1,657) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 515 404 Tm (73.9%) Tj ET
 BT /F2 14 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 350 Tm (Promotion effectiveness) Tj ET
 BT /F2 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 330 Tm (CODE) Tj ET
 BT /F2 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 240 330 Tm (ORDERS) Tj ET
@@ -70,26 +71,27 @@ BT /F2 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 330 330 Tm (DISCOUNT) Tj ET
 BT /F2 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 450 330 Tm (PROMOTION SALES) Tj ET
 0.902 0.914 0.953 rg 42 302 510 1 re f
 BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 310 Tm (WELCOME10) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 240 310 Tm (211) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 330 310 Tm (EUR 2,161) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 450 310 Tm (EUR 19,452) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 240 310 Tm (215) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 330 310 Tm (EUR 2,076) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 450 310 Tm (EUR 18,687) Tj ET
 0.902 0.914 0.953 rg 42 275 510 1 re f
 BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 283 Tm (SUMMER15) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 240 283 Tm (106) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 330 283 Tm (EUR 1,625) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 450 283 Tm (EUR 9,209) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 240 283 Tm (114) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 330 283 Tm (EUR 1,728) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 450 283 Tm (EUR 9,792) Tj ET
 0.902 0.914 0.953 rg 42 248 510 1 re f
 BT /F2 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 42 256 Tm (VIP20) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 240 256 Tm (52) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 330 256 Tm (EUR 894) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 450 256 Tm (EUR 3,578) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 240 256 Tm (42) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 330 256 Tm (EUR 817) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 450 256 Tm (EUR 3,270) Tj ET
 0.941 0.976 0.980 rg 42 137 510 90 re f
 BT /F2 11 Tf 0.098 0.478 0.510 rg 1 0 0 1 58 202 Tm (Data-driven decision note) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 58 183 Tm (74.1% contribution margin on EUR 83,755 gross sales; EUR 16,245 remains to the period) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 58 170 Tm (benchmark.) Tj ET
-BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 58 150 Tm (Use the interactive dashboard to filter by date, SKU, bundle and promotion code.) Tj ET
-BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 92 Tm (Scope: product margin after discounts and VAT, minus declared product costs; not net profit.) Tj ET
-BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 78 Tm (Excludes shipping, payment fees, acquisition and overhead; refunds require separate reconciliation.) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 58 185 Tm (74.1% contribution margin on EUR 83,755 gross sales; EUR 16,245 remains to the period) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 58 173 Tm (benchmark. After shipping, fulfilment, fees and advertising, EUR 35,167 \(50.8% of net) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 58 161 Tm (sales\) remains.) Tj ET
+BT /F1 9 Tf 0.145 0.165 0.290 rg 1 0 0 1 58 146 Tm (Use the interactive dashboard to filter by date, SKU, bundle and promotion code.) Tj ET
+BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 92 Tm (Scope: product margin, then declared shipping, fulfilment, payment fees and advertising; not net profit.) Tj ET
+BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 78 Tm (Per-order costs are allocated by order value; overhead and refunds are excluded.) Tj ET
 BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 64 Tm (Source: validated Excel input or Shopify snapshot. Public demo figures are synthetic, not business results.) Tj ET
 BT /F1 8 Tf 0.467 0.502 0.620 rg 1 0 0 1 42 48 Tm (Margin Map v1.0.0 is local decision support, not an accounting or tax reporting system.) Tj ET
 endstream
@@ -107,10 +109,10 @@ xref
 0000000064 00000 n 
 0000000121 00000 n 
 0000000257 00000 n 
-0000006155 00000 n 
-0000006225 00000 n 
+0000006505 00000 n 
+0000006575 00000 n 
 trailer
 << /Size 7 /Root 1 0 R >>
 startxref
-6300
+6650
 %EOF

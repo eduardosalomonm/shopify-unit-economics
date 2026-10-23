@@ -75,6 +75,22 @@ PROMOTION_RULES = [
     ("VIP20", 20, "2025-08-01", "2026-12-31", "TRUE"),
 ]
 DISCOUNTED_SHARE = 0.42          # orders that carry a code
+
+# Optional variable costs. They are what turns product margin into a figure closer
+# to what the store keeps: a parcel costs money to pack and send, card payments
+# carry a fee, and demand is bought with advertising.
+FULFILMENT_PER_ORDER = 5.40      # pick, pack and postage paid by the store, ex VAT
+SHIPPING_CHARGED = 2.95          # average shipping paid by customers, incl VAT
+PAYMENT_FEE_PCT = 1.5
+PAYMENT_FEE_FIXED = 0.25
+ADVERTISING_BASE = 900           # monthly spend ex VAT before seasonality
+
+
+def advertising_plan(orders):
+    """Monthly advertising that follows the same seasonality as demand."""
+    months = sorted({row[1][:7] for row in orders})
+    return [(month, round(ADVERTISING_BASE * SEASONALITY[int(month[5:7])]))
+            for month in months]
 BASE_ORDERS_PER_DAY = 2.39
 GROWTH_PER_MONTH = 0.018         # gentle upward trend across the window
 
@@ -554,7 +570,7 @@ def build_workbook(path=OUTPUT, seed=11):
         [""],
         ["Sheet", "What it is for"],
         ["Dashboard", "Live, formula-driven Excel companion. The polished interactive dashboard is online."],
-        ["Settings", "Store identity, VAT rate, annual targets and Scenario / Actual pricing mode."],
+        ["Settings", "Store identity, VAT rate, targets, pricing mode and optional fulfilment, payment and advertising costs."],
         ["Catalogue", "Products and bundles together. Use Type to distinguish them."],
         ["Pricing & promotions", "Price history and the discount rules that drive calculated order discounts."],
         ["Pricing planner", "Live Excel price, margin and bundle-saving checks. It updates when yellow price inputs change."],
@@ -579,7 +595,19 @@ def build_workbook(path=OUTPUT, seed=11):
         ["Target start", "%d-01-01" % year],
         ["Target end", "%d-12-31" % year],
         ["Pricing model", "Scenario"],
+        ["Fulfilment cost per order ex VAT", Styled(FULFILMENT_PER_ORDER, CURRENCY_INPUT)],
+        ["Shipping charged per order incl VAT", Styled(SHIPPING_CHARGED, CURRENCY_INPUT)],
+        ["Payment fee (%)", PAYMENT_FEE_PCT],
+        ["Payment fee per order", Styled(PAYMENT_FEE_FIXED, CURRENCY_INPUT)],
+        [""],
+        ["Advertising by month | optional"],
+        ["Month (YYYY-MM)", "Advertising spend ex VAT"],
     ]
+    for month, spend in advertising_plan(orders):
+        settings.append([month, Styled(spend, CURRENCY_INPUT)])
+    settings.extend([[""], ["Leave the four cost rows and this table blank to see product margin only. "
+                            "Per-order costs are shared across lines by value; advertising by each "
+                            "month's net revenue."]])
 
     catalogue = [["Catalogue"],
                  ["Type", "SKU", "Name", "Unit cost ex VAT", "Web price incl VAT",
@@ -767,6 +795,17 @@ def build_workbook(path=OUTPUT, seed=11):
             return INPUT if row_index >= input_from else 0
         return chooser
 
+    def settings_styling(row_index):
+        # Two input tables: the settings themselves, then optional monthly advertising.
+        advertising_title = 16
+        if row_index in (0, advertising_title):
+            return TITLE
+        if row_index in (1, advertising_title + 1):
+            return HEADER
+        if row_index == len(settings) - 1:
+            return NOTE
+        return INPUT if str(settings[row_index][0]).strip() else 0
+
     def pricing_styling(row_index):
         # Two clearly separated tables: live promotion inputs first, historical
         # reference second. Formula cells keep their blue calculated style.
@@ -815,7 +854,7 @@ def build_workbook(path=OUTPUT, seed=11):
                                 hide_gridlines=True, drawing=True,
                                 hidden_rows=(35, 36, 37)),),
         ("Read me", sheet_xml(readme, readme_styling, [36, 92]),),
-        ("Settings", sheet_xml(settings, styling(2), [26, 24]),),
+        ("Settings", sheet_xml(settings, settings_styling, [34, 26]),),
         ("Catalogue", sheet_xml(catalogue, styling(2), [12, 10, 24, 16, 18, 14, 14, 32, 18, 16, 24, 26, 28, 18]),),
         ("Pricing & promotions", sheet_xml(pricing, pricing_styling, [18, 16, 16, 24, 16]),),
         ("Pricing planner", sheet_xml(planner, planner_styling, [12, 24, 20, 18, 20, 16, 20, 20, 28]),),

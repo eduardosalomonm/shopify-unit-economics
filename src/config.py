@@ -8,6 +8,7 @@ PyYAML is installed locally.
 import json
 import math
 import os
+import re
 
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,6 +24,7 @@ NUMERIC_FIELDS = frozenset({
     "descuento_linea", "discount", "gross", "ingreso_con_iva", "ingreso_neto",
     "iva_implicito", "iva_pedido_declarado", "margin", "margen_contribucion",
     "margen_pct", "net", "objetivo_ventas_brutas", "porcentaje", "precio",
+    "logistica_por_pedido", "comision_pago_pct", "comision_pago_fija",
     "precio_bruto", "precio_catalogo", "precio_web", "quantity", "stock",
     "stock_on_hand", "sueltos_declarado", "tipo_pct", "tirada", "uds",
     "unidades", "units",
@@ -58,6 +60,58 @@ def validate_finite_values(value, field=None):
             raise ConfigError("Numeric inputs must be finite and within supported range.") from None
         if not math.isfinite(numeric):
             raise ConfigError("Numeric inputs must be finite; NaN and infinity are not supported.")
+
+
+VARIABLE_COST_FIELDS = ("logistica_por_pedido", "comision_pago_pct", "comision_pago_fija")
+MONTH_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
+def variable_costs(costs):
+    """The optional costs between product margin and profit, or None when undeclared.
+
+    Product margin stays the default reading. A store that declares this block also
+    gets a second figure that deducts fulfilment, payment fees and advertising and
+    adds the shipping its customers paid. Absent fields count as zero.
+    """
+    block = (costs or {}).get("costes_variables")
+    if not block:
+        return None
+    return {
+        "logistica_por_pedido": float(block.get("logistica_por_pedido") or 0),
+        "comision_pago_pct": float(block.get("comision_pago_pct") or 0),
+        "comision_pago_fija": float(block.get("comision_pago_fija") or 0),
+        "publicidad": {str(month): float(amount)
+                       for month, amount in (block.get("publicidad") or {}).items()},
+    }
+
+
+def validate_variable_costs(costs, path):
+    block = costs.get("costes_variables")
+    if block is None:
+        return
+    if not isinstance(block, dict):
+        raise ConfigError("%s: costes_variables must be an object." % path)
+    for field in VARIABLE_COST_FIELDS:
+        try:
+            value = float(block.get(field) or 0)
+        except (TypeError, ValueError):
+            raise ConfigError("%s: costes_variables.%s must be a number." % (path, field)) from None
+        if value < 0:
+            raise ConfigError("%s: costes_variables.%s cannot be negative." % (path, field))
+    if float(block.get("comision_pago_pct") or 0) >= 100:
+        raise ConfigError("%s: the payment fee percentage must be below 100." % path)
+    advertising = block.get("publicidad") or {}
+    if not isinstance(advertising, dict):
+        raise ConfigError("%s: costes_variables.publicidad must map YYYY-MM to an amount." % path)
+    for month, amount in advertising.items():
+        if not MONTH_PATTERN.match(str(month)):
+            raise ConfigError("%s: advertising months must use YYYY-MM." % path)
+        try:
+            if float(amount) < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise ConfigError("%s: advertising for %s must be a non-negative number."
+                              % (path, month)) from None
 
 
 def costs_path():
@@ -116,3 +170,4 @@ def validate_costs(costs, path="cost model"):
     objective = costs["objetivo"]
     if not isinstance(objective, dict) or not all(k in objective for k in ("unidades", "desde", "hasta")):
         raise ConfigError("%s: target needs units, start and end." % path)
+    validate_variable_costs(costs, path)

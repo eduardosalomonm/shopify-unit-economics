@@ -8,7 +8,7 @@ import os
 import sqlite3
 import sys
 
-from config import ConfigError, costs_path, load_costs
+from config import ConfigError, costs_path, load_costs, variable_costs
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.abspath(os.environ.get("PIPELINE_DATA_DIR", os.path.join(BASE, "data")))
@@ -239,13 +239,36 @@ def check_iva(conn, costs, res):
                       % sku)
 
 
+def check_costes_variables(conn, costs, res):
+    """Advertising for a month without sales has nothing to be allocated to.
+
+    It would silently vanish from every total, flattering the result, so it is
+    reported. It is a warning: a store can advertise in a month before launch.
+    """
+    modelo = variable_costs(costs)
+    if modelo is None:
+        return
+    meses = {row[0] for row in conn.execute("SELECT DISTINCT substr(fecha, 1, 7) FROM lineas")}
+    for mes, importe in sorted(modelo["publicidad"].items()):
+        if importe and mes not in meses:
+            res.aviso("Variable cost allocation",
+                      "%s: %.2f of advertising has no sales in that month, so it is not "
+                      "included in the result after variable costs." % (mes, importe))
+    sin_coste = conn.execute(
+        "SELECT COUNT(*) FROM lineas WHERE resultado_variable IS NULL").fetchone()[0]
+    if sin_coste:
+        res.aviso("Variable cost allocation",
+                  "%d lines have no product cost, so they have no result after variable costs."
+                  % sin_coste)
+
+
 # The single registry of controls. publish.py runs the same set and renders the
 # same names, so a new control is added here once instead of in three places.
 ALL_CHECKS = (check_sku_desconocido, check_precio_catalogo, check_bundles,
-              check_descuentos, check_iva)
+              check_descuentos, check_iva, check_costes_variables)
 
 CONTROL_NAMES = ("Unknown SKU", "Catalogue price vs charged price", "Bundle pricing rules",
-                 "Discount rule vs line allocation", "VAT consistency")
+                 "Discount rule vs line allocation", "VAT consistency", "Variable cost allocation")
 
 
 def run_all(conn, costs, res=None):

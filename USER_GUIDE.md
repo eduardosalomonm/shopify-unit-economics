@@ -27,7 +27,7 @@ discounts), so it works without Shopify credentials.
    | Sheet | What it controls |
    |---|---|
    | `Dashboard` | Formula-driven Excel companion. It updates immediately and links to the polished online dashboard. |
-   | `Settings` | Store name, VAT, target window and the `Scenario` / `Actual` pricing mode |
+   | `Settings` | Store name, VAT, target window, the `Scenario` / `Actual` pricing mode and optional fulfilment, payment and advertising costs |
    | `Catalogue` | Products and bundles together, with costs, current prices and stock; edit yellow values |
    | `Pricing & promotions` | Live promotion rules first, then price-history reference; edit yellow values |
    | `Pricing planner` | Live Excel price, margin and bundle checks; blue cells calculate automatically |
@@ -117,6 +117,22 @@ the dashboard as `output/executive-summary.pdf`.
   blank for an undiscounted line.
 - Use `TRUE` or `FALSE` for `Taxable`.
 
+### Variable costs (optional)
+
+Fill these in on `Settings` to see what remains after the costs of selling, not
+only after product cost. Leave them all blank to keep the product-margin view.
+
+| Setting | Enter |
+|---|---|
+| `Fulfilment cost per order ex VAT` | Pick, pack and postage the store pays for one order. |
+| `Shipping charged per order incl VAT` | Average shipping customers pay per order. Use `0` for free shipping. |
+| `Payment fee (%)` and `Payment fee per order` | Your payment provider's rate, for example `1.5` and `0.25`. |
+| `Advertising by month` table | One row per month, `YYYY-MM` and the spend ex VAT. |
+
+Per-order amounts are shared across an order's lines by value. Advertising is shared
+across a month's lines by net revenue. A month of advertising with no sales is
+listed under **Data controls**, because it has nothing to be allocated to.
+
 ## What the dashboard reports
 
 | Metric | Read it as |
@@ -126,6 +142,8 @@ the dashboard as `output/executive-summary.pdf`.
 | Discount rate | Share of list price given away, plus how many orders used a code. |
 | Units and lines per order | Basket size. A store at 1.00 has no attach at all. |
 | Margin per order | What one order is worth after cost and VAT. |
+| After variable costs | Contribution margin plus shipping charged, minus fulfilment, payment fees and advertising. Shown only when those costs are declared; still not net profit. |
+| Break-even discount | The deepest discount on today's price that still covers the product's cost, VAT and payment fee. |
 | Gross-sales benchmark | Complete imported-period sales against the declared benchmark; filters do not redefine it. |
 | Unit run rate vs target | Units a week now, against the pace the target window needs. |
 | From list price to contribution | Where the money goes: discounts, VAT, cost, what is left. |

@@ -90,9 +90,22 @@ the checks and normal publication must fail.
 ### Calculation scope
 
 The dashboard's contribution metric is **product margin**: sales after discounts
-and VAT, minus declared product costs. It is **not net profit**. Shipping, payment
-fees, acquisition and overhead are excluded; refunds and returned quantities need
-separate reconciliation before relying on a real-store report. No synthetic demo
+and VAT, minus declared product costs. It is **not net profit**. Refunds and
+returned quantities need separate reconciliation before relying on a real-store
+report.
+
+Shipping, payment fees and advertising are optional **variable costs**. When a
+store declares them, every view adds a second figure, **after variable costs**: product
+margin plus the shipping customers paid, minus fulfilment, payment fees and
+advertising. Per-order amounts are allocated to lines by what the customer paid;
+monthly advertising by each line's share of that month's net revenue, so SKU and
+promotion filters still add up to the store total. Salaries, rent, software and
+other overhead stay excluded, so this is still not net profit. Without the
+declaration the dashboard shows product margin only, exactly as before.
+
+Each product also shows its **break-even discount**: the deepest discount on
+today's catalogue price that still covers product cost, VAT and the percentage
+payment fee. Per-order costs are left out of it because they depend on the basket. No synthetic demo
 figure is a claim of achieved revenue or business impact. Margin Map is local
 decision support, not accounting or tax-reporting software.
 
@@ -124,7 +137,18 @@ a production SaaS or a verified integration for every Shopify store. See
    `read_orders` and `read_products`; `read_inventory` is only for catalogue
    inspection.
 2. Create a private `costs.private.json` from `costs.example.json` or use a local
-   `costs.yml`. Neither is committed.
+   `costs.yml`. Neither is committed. To see results after variable costs, add an
+   optional block (amounts ex VAT, advertising by `YYYY-MM`); shipping charged to
+   customers is read from each Shopify order:
+
+   ```json
+   "costes_variables": {
+     "logistica_por_pedido": 5.40,
+     "comision_pago_pct": 1.5,
+     "comision_pago_fija": 0.25,
+     "publicidad": {"2026-09": 920, "2026-10": 1035}
+   }
+   ```
 3. Verify the connection:
 
    ```bash

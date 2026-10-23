@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import checks  # noqa: E402
-from config import ConfigError, costs_path, load_costs  # noqa: E402
+from config import ConfigError, costs_path, load_costs, variable_costs  # noqa: E402
 from project_meta import version  # noqa: E402
 from transform import catalogo, latest_snapshot  # noqa: E402
 
@@ -107,17 +107,53 @@ def monthly_metrics(conn):
     return metrics
 
 
-def daily_metrics(conn):
+def daily_metrics(conn, with_variable_costs=False):
     rows = conn.execute("""
         SELECT fecha, pedido, sku, unidades, ingreso_con_iva, ingreso_neto,
-               margen_contribucion, descuento_linea, codigos_descuento
+               margen_contribucion, descuento_linea, codigos_descuento,
+               ingreso_envio, coste_logistica, comision_pago, coste_publicidad,
+               resultado_variable
         FROM lineas ORDER BY fecha, pedido, sku
     """).fetchall()
-    return [{"date": row[0], "order": row[1], "sku": row[2], "units": row[3] or 0,
-             "gross": row[4] or 0, "net": row[5] or 0,
-             "margin": row[6] or 0, "discount": row[7] or 0,
-             "code": row[8] or ""}
-            for row in rows]
+    result = []
+    for row in rows:
+        item = {"date": row[0], "order": row[1], "sku": row[2], "units": row[3] or 0,
+                "gross": row[4] or 0, "net": row[5] or 0,
+                "margin": row[6] or 0, "discount": row[7] or 0,
+                "code": row[8] or ""}
+        # Only a store that declared variable costs carries them; the default page
+        # stays as small as before.
+        if with_variable_costs:
+            item.update({"ship": row[9] or 0, "fulfil": row[10] or 0, "fees": row[11] or 0,
+                         "ads": row[12] or 0, "after": row[13] or 0})
+        result.append(item)
+    return result
+
+
+def breakeven_discount(costs, sku, model=None):
+    """The deepest discount on today's catalogue price that still covers the unit.
+
+    It counts product cost, VAT and the percentage payment fee. Per-order costs are
+    left out because they depend on what else is in the basket. None means the
+    item is already sold at or below cost.
+    """
+    entry = catalogo(costs).get(sku)
+    price = None
+    if sku in costs.get("productos", {}):
+        price = float(costs["productos"][sku]["precio_web"])
+    else:
+        for bundle in (costs.get("bundles") or {}).values():
+            if bundle.get("sku") == sku:
+                price = float(bundle["precio_web"])
+    if not entry or not price:
+        return None
+    vat = float((costs.get("iva") or {}).get("tipo_pct", 21.0))
+    fee = (model or {}).get("comision_pago_pct", 0.0) / 100.0
+    kept_per_euro = 1 / (1 + vat / 100.0) - fee
+    if kept_per_euro <= 0:
+        return None
+    rate = 100 * (1 - entry["coste"] / (price * kept_per_euro))
+    return round(rate, 1) if rate > 0 else None
 
 
 def trading_metrics(conn):
@@ -230,6 +266,17 @@ def pace(costs, units_sold, today=None):
                                if remaining else None,
             "current_weekly": units_sold / (elapsed / 7.0),
             "on_track": projected >= target_units, "not_started": False}
+
+
+def scope_note(model):
+    if model is None:
+        return ("Product margin means sales after discounts and VAT, minus declared product "
+                "costs. Shipping, payment fees, acquisition and overhead are excluded; declare "
+                "them as variable costs to see what remains.")
+    return ("Product margin means sales after discounts and VAT, minus declared product costs. "
+            "After variable costs also adds the shipping customers paid and deducts declared "
+            "fulfilment, payment fees and advertising, allocated to lines by value. Salaries, rent, software, "
+            "returns and other overhead are still excluded.")
 
 
 def product_metrics(conn, costs):
@@ -374,8 +421,9 @@ def main():
         raise SystemExit("COST MODEL ERROR: %s" % exc)
 
     conn = sqlite3.connect(DB_PATH)
+    model = variable_costs(costs)
     monthly = monthly_metrics(conn)
-    daily = daily_metrics(conn)
+    daily = daily_metrics(conn, with_variable_costs=model is not None)
     as_of_date = (datetime.datetime.strptime(daily[-1]["date"], "%Y-%m-%d").date()
                   if daily else None)
     data_through = as_of_date.strftime("%d %b %Y") if as_of_date else "No sales data"
@@ -454,9 +502,12 @@ def main():
         "{{EXECUTIVE_PDF}}": "executive-summary.pdf",
         "{{MONTHLY_JSON}}": script_json(monthly),
         "{{DAILY_JSON}}": script_json(daily),
-        "{{PRODUCT_JSON}}": script_json([{key: value for key, value in product.items()
-                                          if key in ("sku", "name", "units", "gross", "net", "margin", "margin_pct")}
+        "{{PRODUCT_JSON}}": script_json([dict({key: value for key, value in product.items()
+                                               if key in ("sku", "name", "units", "gross", "net", "margin", "margin_pct")},
+                                              breakeven=breakeven_discount(costs, product["sku"], model))
                                          for product in products]),
+        "{{VARIABLE_COSTS}}": "true" if model is not None else "false",
+        "{{SCOPE_NOTE}}": html.escape(scope_note(model)),
     }
     for key, value in replacements.items():
         page = page.replace(key, value)

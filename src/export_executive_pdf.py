@@ -11,7 +11,7 @@ import sqlite3
 import sys
 import textwrap
 
-from config import costs_path, load_costs
+from config import costs_path, load_costs, variable_costs
 from project_meta import version
 
 
@@ -34,6 +34,10 @@ def ellipsize(value, width):
 
 def currency(value):
     return "EUR {:,.0f}".format(value or 0)
+
+
+def amount(value):
+    return "{:,.0f}".format(value or 0)
 
 
 def pct(value):
@@ -91,6 +95,12 @@ def main():
                COALESCE(SUM(unidades), 0), COUNT(DISTINCT pedido)
         FROM lineas
     """).fetchone()
+    variable = conn.execute("""
+        SELECT COALESCE(SUM(ingreso_envio), 0), COALESCE(SUM(coste_logistica), 0),
+               COALESCE(SUM(comision_pago), 0), COALESCE(SUM(coste_publicidad), 0),
+               COALESCE(SUM(resultado_variable), 0)
+        FROM lineas
+    """).fetchone()
     products = conn.execute("""
         SELECT sku, titulo, SUM(unidades), SUM(ingreso_con_iva), SUM(margen_contribucion), SUM(ingreso_neto)
         FROM lineas GROUP BY sku, titulo ORDER BY SUM(ingreso_con_iva) DESC LIMIT 5
@@ -104,12 +114,23 @@ def main():
     conn.close()
 
     gross, net, margin, discount, units, orders = total
+    model = variable_costs(costs)
+    shipping, fulfilment, fees, advertising, after = variable
+    after_pct = 100 * after / net if net else 0
     brand = costs.get("meta", {}).get("marca", "Store")
     target = float(costs.get("meta", {}).get("objetivo_ventas_brutas", gross))
     margin_pct = 100 * margin / net if net else 0
     discount_rate = 100 * discount / (gross + discount) if gross + discount else 0
     progress = min(100, 100 * gross / target) if target else 0
-    if margin < 0:
+    if model is not None and margin >= 0 and after < 0:
+        decision = ("Product margin is positive at %s, but trading loses %s after shipping, fulfilment, "
+                    "payment fees and advertising; fix per-order costs or ad spend before scaling."
+                    % (pct(margin_pct), currency(abs(after))))
+    elif model is not None and margin_pct >= 30 and after_pct < 10:
+        decision = ("A %s product margin shrinks to %s of net sales after variable costs; "
+                    "advertising (%s) and fulfilment (%s) decide whether growth pays."
+                    % (pct(margin_pct), pct(after_pct), currency(advertising), currency(fulfilment)))
+    elif margin < 0:
         decision = "Trading is loss-making: review price, product cost and bundle composition before scaling demand."
     elif margin_pct < 30:
         decision = "Contribution is positive but thin at %s; protect margin before increasing promotion pressure." % pct(margin_pct)
@@ -117,6 +138,8 @@ def main():
         decision = "The imported period has passed its %s gross-sales benchmark with a %s contribution margin." % (currency(target), pct(margin_pct))
     else:
         decision = "%s contribution margin on %s gross sales; %s remains to the period benchmark." % (pct(margin_pct), currency(gross), currency(max(target - gross, 0)))
+    if model is not None and after >= 0 and not decision.startswith(("Product margin is positive", "A ")):
+        decision += " After shipping, fulfilment, fees and advertising, %s (%s of net sales) remains." % (currency(after), pct(after_pct))
 
     stream = []
     stream.extend([rect(0, 770, 595, 72, "5A4FE8"), text(42, 805, "Margin Map | Executive summary", 19, "FFFFFF", True),
@@ -125,13 +148,19 @@ def main():
     stream.append(text(42, 740, "Commercial performance", 14, "252A4A", True))
     cards = [("Gross sales", currency(gross)), ("Contribution margin", currency(margin)),
              ("Orders", "{:,.0f}".format(orders)), ("Margin rate", pct(margin_pct))]
+    if model is not None:
+        cards[2] = ("Margin rate", pct(margin_pct))
+        cards[3] = ("After variable costs", currency(after))
     for index, (label, value) in enumerate(cards):
         x = 42 + index * 132
         stream.extend([rect(x, 668, 120, 55, "F7F7FC"), text(x + 10, 704, label, 8, "77809E"),
                        text(x + 10, 682, value, 14, "252A4A", True)])
     stream.extend([text(42, 638, "Gross sales benchmark", 11, "252A4A", True), text(405, 638, "%s of %s" % (pct(progress), currency(target)), 9, "77809E"),
                    rect(42, 619, 510, 8, "E8EAF4"), rect(42, 619, 510 * progress / 100, 8, "5A4FE8"),
-                   text(42, 594, "%s units sold | %s discount investment (%s of list price)" % ("{:,.0f}".format(units), currency(discount), pct(discount_rate)), 9, "77809E")])
+                   text(42, 594, "%s units sold | %s orders | %s discount investment (%s of list price)" % ("{:,.0f}".format(units), "{:,.0f}".format(orders), currency(discount), pct(discount_rate)), 9, "77809E")])
+    if model is not None:
+        stream.append(text(42, 578, "Margin %s + shipping %s - fulfilment %s - fees %s - ads %s = %s after variable costs"
+                           % (currency(margin), amount(shipping), amount(fulfilment), amount(fees), amount(advertising), currency(after)), 8, "77809E"))
     stream.extend([text(42, 552, "Top product economics", 14, "252A4A", True), text(42, 532, "PRODUCT", 8, "77809E", True), text(295, 532, "GROSS SALES", 8, "77809E", True), text(415, 532, "CONTRIBUTION", 8, "77809E", True), text(515, 532, "MARGIN", 8, "77809E", True)])
     y = 512
     for sku, name, product_units, product_gross, product_margin, product_net in products:
@@ -144,12 +173,18 @@ def main():
     for code, promo_orders, promo_discount, promo_sales in promotions:
         stream.extend([rect(42, y - 8, 510, 1, "E6E9F3"), text(42, y, ellipsize(code, 30), 9, "252A4A", True), text(240, y, "{:,.0f}".format(promo_orders), 9), text(330, y, currency(promo_discount), 9), text(450, y, currency(promo_sales), 9)])
         y -= 27
-    decision_lines = textwrap.wrap(decision, width=88, break_long_words=False)[:2]
+    decision_lines = textwrap.wrap(decision, width=88, break_long_words=False)[:3]
     stream.extend([rect(42, 137, 510, 90, "F0F9FA"), text(58, 202, "Data-driven decision note", 11, "197A82", True)])
-    stream.extend(text(58, 183 - index * 13, line, 9) for index, line in enumerate(decision_lines))
-    stream.extend([text(58, 150, "Use the interactive dashboard to filter by date, SKU, bundle and promotion code.", 9),
-                   text(42, 92, "Scope: product margin after discounts and VAT, minus declared product costs; not net profit.", 8, "77809E"),
-                   text(42, 78, "Excludes shipping, payment fees, acquisition and overhead; refunds require separate reconciliation.", 8, "77809E"),
+    stream.extend(text(58, 185 - index * 12, line, 9) for index, line in enumerate(decision_lines))
+    if model is None:
+        scope = ("Scope: product margin after discounts and VAT, minus declared product costs; not net profit.",
+                 "Excludes shipping, payment fees, acquisition and overhead; refunds require separate reconciliation.")
+    else:
+        scope = ("Scope: product margin, then declared shipping, fulfilment, payment fees and advertising; not net profit.",
+                 "Per-order costs are allocated by order value; overhead and refunds are excluded.")
+    stream.extend([text(58, 146, "Use the interactive dashboard to filter by date, SKU, bundle and promotion code.", 9),
+                   text(42, 92, scope[0], 8, "77809E"),
+                   text(42, 78, scope[1], 8, "77809E"),
                    text(42, 64, "Source: validated Excel input or Shopify snapshot. Public demo figures are synthetic, not business results.", 8, "77809E"),
                    text(42, 48, "Margin Map v%s is local decision support, not an accounting or tax reporting system." % version(), 8, "77809E")])
 

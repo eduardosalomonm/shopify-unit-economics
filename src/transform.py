@@ -19,7 +19,7 @@ import os
 import sqlite3
 import sys
 
-from config import ConfigError, costs_path, load_costs, validate_finite_values
+from config import ConfigError, costs_path, load_costs, validate_finite_values, variable_costs
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.abspath(os.environ.get("PIPELINE_DATA_DIR", os.path.join(BASE, "data")))
@@ -141,6 +141,7 @@ def build_rows(snapshot, costs):
     tipo_iva = float(costs.get("iva", {}).get("tipo_pct", 21.0))
     tabla = catalogo(costs)
     rows = []
+    envio_por_pedido = {}
     for order in snapshot["pedidos"]:
         if order.get("test") or order.get("cancelledAt"):
             continue
@@ -148,6 +149,13 @@ def build_rows(snapshot, costs):
         codigos = ",".join(order.get("discountCodes") or [])
         incluye_iva = bool(order.get("taxesIncluded"))
         descuento_pedido = money(order, "currentTotalDiscountsSet") or 0.0
+
+        # Shipping is charged once per order object. The Excel workflow writes one
+        # object per line, so it records the charge on the first line of each order.
+        envio = money(order, "totalShippingPriceSet") or 0.0
+        envio_neto = envio / (1 + tipo_iva / 100.0) if incluye_iva else envio
+        cobrado, neto = envio_por_pedido.get(order["name"], (0.0, 0.0))
+        envio_por_pedido[order["name"]] = (cobrado + envio, neto + envio_neto)
 
         lineas = [e["node"] for e in order["lineItems"]["edges"]]
         base_total = sum((money(i, "originalUnitPriceSet") or 0.0) * (i.get("quantity") or 0)
@@ -203,7 +211,79 @@ def build_rows(snapshot, costs):
                 "iva_pedido_declarado": money(order, "currentTotalTaxSet"),
                 "envio_pedido": money(order, "totalShippingPriceSet"),
             })
+    aplicar_costes_variables(rows, envio_por_pedido, costs)
     return rows
+
+
+def repartir(total, pesos):
+    """Split an amount into cents by weight, so the parts add up to the total exactly.
+
+    Rounding each share independently leaves a cent or two unexplained on a busy
+    order; the largest remainders absorb those cents instead.
+    """
+    centimos = int(round(total * 100))
+    suma = sum(pesos)
+    if suma <= 0:
+        pesos, suma = [1.0] * len(pesos), float(len(pesos))
+    brutos = [centimos * peso / suma for peso in pesos]
+    partes = [int(valor) for valor in brutos]
+    orden = sorted(range(len(pesos)), key=lambda i: (-(brutos[i] - partes[i]), i))
+    for indice in orden[:centimos - sum(partes)]:
+        partes[indice] += 1
+    return [parte / 100.0 for parte in partes]
+
+
+def aplicar_costes_variables(rows, envio_por_pedido, costs):
+    """Add the optional per-order and monthly costs to each line.
+
+    Order-level amounts (shipping charged, fulfilment, payment fees) follow each
+    line's share of what the customer paid. Monthly advertising follows each line's
+    share of that month's net revenue. Both are allocations, stated as such, so a
+    SKU or promotion filter still adds up to the store total.
+    """
+    modelo = variable_costs(costs)
+    campos = ("ingreso_envio", "coste_logistica", "comision_pago", "coste_publicidad",
+              "resultado_variable")
+    for row in rows:
+        for campo in campos:
+            row[campo] = None
+    if modelo is None or not rows:
+        return
+
+    por_pedido = {}
+    for row in rows:
+        por_pedido.setdefault(row["pedido"], []).append(row)
+    for pedido, lineas in por_pedido.items():
+        pesos = [max(linea["ingreso_con_iva"], 0.0) for linea in lineas]
+        envio_cobrado, envio_neto = envio_por_pedido.get(pedido, (0.0, 0.0))
+        # Payment providers charge on everything the customer paid, VAT and shipping included.
+        cobrado = sum(linea["ingreso_con_iva"] for linea in lineas) + envio_cobrado
+        comision = cobrado * modelo["comision_pago_pct"] / 100.0 + modelo["comision_pago_fija"]
+        for campo, importe in (("ingreso_envio", envio_neto),
+                               ("coste_logistica", modelo["logistica_por_pedido"]),
+                               ("comision_pago", comision)):
+            for linea, parte in zip(lineas, repartir(importe, pesos)):
+                linea[campo] = parte
+
+    por_mes = {}
+    for row in rows:
+        por_mes.setdefault(row["fecha"][:7], []).append(row)
+    for row in rows:
+        row["coste_publicidad"] = 0.0
+    for mes, importe in modelo["publicidad"].items():
+        lineas = por_mes.get(mes)
+        if not lineas:
+            continue  # checks.py reports advertising that has no sales to land on.
+        pesos = [max(linea["ingreso_neto"], 0.0) for linea in lineas]
+        for linea, parte in zip(lineas, repartir(importe, pesos)):
+            linea["coste_publicidad"] = parte
+
+    for row in rows:
+        if row["margen_contribucion"] is None:
+            continue
+        row["resultado_variable"] = round(
+            row["margen_contribucion"] + row["ingreso_envio"] - row["coste_logistica"]
+            - row["comision_pago"] - row["coste_publicidad"], 2)
 
 
 def write_db(rows):
@@ -220,13 +300,17 @@ def write_db(rows):
             ingreso_neto REAL, coste_total REAL,
             margen_contribucion REAL, margen_pct REAL,
             taxable INTEGER, codigos_descuento TEXT, estado_financiero TEXT,
-            iva_pedido_declarado REAL, envio_pedido REAL
+            iva_pedido_declarado REAL, envio_pedido REAL,
+            ingreso_envio REAL, coste_logistica REAL, comision_pago REAL,
+            coste_publicidad REAL, resultado_variable REAL
         )
     """)
     columns = ["pedido", "fecha", "sku", "titulo", "unidades", "precio_bruto", "descuento_linea",
                "precio_catalogo", "coste_unitario", "ingreso_con_iva", "iva_implicito",
                "ingreso_neto", "coste_total", "margen_contribucion", "margen_pct", "taxable",
-               "codigos_descuento", "estado_financiero", "iva_pedido_declarado", "envio_pedido"]
+               "codigos_descuento", "estado_financiero", "iva_pedido_declarado", "envio_pedido",
+               "ingreso_envio", "coste_logistica", "comision_pago", "coste_publicidad",
+               "resultado_variable"]
     conn.executemany(
         "INSERT INTO lineas VALUES (%s)" % ",".join("?" * len(columns)),
         [tuple(row[c] for c in columns) for row in rows],
@@ -245,22 +329,27 @@ def write_csv(rows, costs):
             "sku": row["sku"],
             "nombre": (tabla.get(row["sku"]) or {}).get("nombre", "DESCONOCIDO"),
             "unidades": 0, "ingreso_neto": 0.0, "coste_total": 0.0, "margen": 0.0,
+            "resultado_variable": None,
         })
         entry["unidades"] += row["unidades"]
         entry["ingreso_neto"] += row["ingreso_neto"]
         entry["coste_total"] += row["coste_total"] or 0.0
         entry["margen"] += row["margen_contribucion"] or 0.0
+        if row["resultado_variable"] is not None:
+            entry["resultado_variable"] = (entry["resultado_variable"] or 0.0) + row["resultado_variable"]
 
     filas = sorted(resumen.values(), key=lambda r: -r["unidades"])
     for fila in filas:
-        for key in ("ingreso_neto", "coste_total", "margen"):
-            fila[key] = round(fila[key], 2)
+        for key in ("ingreso_neto", "coste_total", "margen", "resultado_variable"):
+            if fila[key] is not None:
+                fila[key] = round(fila[key], 2)
         fila["margen_pct"] = (round(100.0 * fila["margen"] / fila["ingreso_neto"], 1)
                               if fila["ingreso_neto"] else None)
 
     with open(CSV_PATH, "w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=["sku", "nombre", "unidades", "ingreso_neto",
-                                                "coste_total", "margen", "margen_pct"])
+                                                "coste_total", "margen", "margen_pct",
+                                                "resultado_variable"])
         writer.writeheader()
         writer.writerows(filas)
     return filas
@@ -315,6 +404,10 @@ def main():
     print("%-8s %-28s %6d %10.2f %10s %10.2f %7s"
           % ("TOTAL", "", total_u, total_i, "", total_m,
              "%.1f" % (100.0 * total_m / total_i) if total_i else "-"))
+
+    if variable_costs(costs) is not None:
+        resultado = sum(f["resultado_variable"] or 0.0 for f in filas)
+        print("After shipping, fulfilment, payment fees and advertising: %.2f" % resultado)
 
     meta, vendidas, dias, desde, hasta, as_of = contador_objetivo(rows, costs)
     print()
