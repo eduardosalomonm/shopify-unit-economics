@@ -2,7 +2,7 @@
 
 All notable public changes to Margin Map are recorded here.
 
-## Unreleased
+## 1.1.0 - 2026-10-23
 
 - Added optional variable costs (fulfilment, shipping charged, payment fees and monthly
   advertising) and a result after variable costs across the overview, products,

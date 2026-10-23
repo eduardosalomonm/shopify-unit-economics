@@ -10,7 +10,7 @@ contribution margin by SKU, bundle-price checks and a static dashboard. It was
 first built for a Shopify e-commerce store, then adapted into this
 credential-free public version so anyone can explore the workflow safely.
 
-Current public release: **v1.0.0**. See [CHANGELOG.md](CHANGELOG.md).
+Current public release: **v1.1.0**. See [CHANGELOG.md](CHANGELOG.md).
 
 The project is designed for two use cases:
 
