@@ -156,6 +156,19 @@ python3 src/run_excel_dashboard.py \
   --open
 ```
 
+## Build recovery and multiple stores
+
+Each Excel build uses its own temporary database and clears its intermediate
+files automatically. Calculation, validation and rendering errors leave the
+previous dashboard and PDF intact. Those previous files still describe the last
+successful build: fix the reported error and rerun before using them for new data.
+
+For separate stores or scenarios, choose a separate output folder for each, such
+as `--output output/store-a/dashboard.html`. Each folder has a single
+`executive-summary.pdf`, so different HTML filenames in the same folder share
+that PDF. If a file error appears, close apps locking the output files and check
+that you can write to the destination folder.
+
 ## Shopify mode
 
 The Excel workflow is separate from the optional live Shopify connection. For a

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import webbrowser
 
 from excel_input import ExcelInputError, write_inputs
@@ -12,8 +13,6 @@ from excel_input import ExcelInputError, write_inputs
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_INPUT = os.path.join(BASE, "assets", "unit-economics-input.xlsx")
-GENERATED_COSTS = os.path.join(BASE, "data", "costs-from-excel.json")
-GENERATED_SNAPSHOT = os.path.join(BASE, "data", "raw", "orders-from-excel.json")
 DEFAULT_OUTPUT = os.path.join(BASE, "output", "dashboard.html")
 
 
@@ -33,22 +32,35 @@ def build_dashboard(workbook_path, output_path):
     """
     workbook_path = os.path.abspath(workbook_path)
     output_path = os.path.abspath(output_path)
-    os.makedirs(os.path.dirname(GENERATED_SNAPSHOT), exist_ok=True)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    write_inputs(workbook_path, GENERATED_COSTS, GENERATED_SNAPSHOT)
-
-    environment = os.environ.copy()
-    environment.update({"COSTS_FILE": GENERATED_COSTS, "SNAPSHOT": GENERATED_SNAPSHOT,
-                        "PANEL_OUT": output_path})
-    print("1/4  Excel input accepted", flush=True)
-    print("2/4  Calculating margins and targets...", flush=True)
-    run("transform.py", environment)
-    print("3/4  Running integrity checks...", flush=True)
-    run("checks.py", environment)
-    print("4/4  Generating dashboard and executive PDF...", flush=True)
-    run("publish.py", environment)
     pdf_path = os.path.join(os.path.dirname(output_path), "executive-summary.pdf")
-    run("export_executive_pdf.py", environment, ("--output", pdf_path))
+    if Path(output_path) == Path(pdf_path):
+        raise ExcelInputError("Choose an HTML output filename, not executive-summary.pdf.")
+    if Path(workbook_path).resolve() in (Path(output_path).resolve(), Path(pdf_path).resolve()):
+        raise ExcelInputError("Output must not overwrite the input workbook. Choose a different output path.")
+    output_directory = os.path.dirname(output_path)
+    os.makedirs(output_directory, exist_ok=True)
+    # Stage on the destination filesystem so each final replacement is atomic.
+    # Every run gets its own database, regardless of inherited shell settings.
+    with tempfile.TemporaryDirectory(prefix=".margin-map-", dir=output_directory) as working:
+        generated_costs = os.path.join(working, "costs.json")
+        generated_snapshot = os.path.join(working, "orders-from-excel.json")
+        staged_html = os.path.join(working, "dashboard.html")
+        staged_pdf = os.path.join(working, "executive-summary.pdf")
+        write_inputs(workbook_path, generated_costs, generated_snapshot)
+        environment = os.environ.copy()
+        environment.update({"COSTS_FILE": generated_costs, "SNAPSHOT": generated_snapshot,
+                            "PIPELINE_DATA_DIR": working, "PANEL_OUT": staged_html})
+        print("1/4  Excel input accepted", flush=True)
+        print("2/4  Calculating margins and targets...", flush=True)
+        run("transform.py", environment)
+        print("3/4  Running integrity checks...", flush=True)
+        run("checks.py", environment)
+        print("4/4  Generating dashboard and executive PDF...", flush=True)
+        run("publish.py", environment)
+        run("export_executive_pdf.py", environment, ("--output", staged_pdf))
+        # A calculation, validation or rendering failure leaves both old outputs intact.
+        os.replace(staged_pdf, pdf_path)
+        os.replace(staged_html, output_path)
     return output_path, pdf_path
 
 
@@ -64,6 +76,10 @@ def main():
         output_path, pdf_path = build_dashboard(args.input, args.output)
     except ExcelInputError as exc:
         print("EXCEL INPUT ERROR: %s" % exc)
+        return 1
+    except OSError as exc:
+        print("FILE ERROR: %s" % exc)
+        print("Check that the output folder is writable and close any app locking the output files, then retry.")
         return 1
     print("DONE: %s" % output_path)
     print("PDF:  %s" % pdf_path)

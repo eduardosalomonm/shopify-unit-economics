@@ -160,9 +160,15 @@ CHANGELOG.md / VERSION            Public release history and current version
 RELEASE_CHECKLIST.md              Privacy, reproducibility and publication checks
 ```
 
-The pipeline creates its working files in ignored `data/` and `output/` folders.
-They are deliberately excluded from the GitHub package and are recreated when a
-user runs the workflow.
+The Excel workflow isolates each build in a temporary working folder and removes
+its intermediate files automatically. It generates both deliverables before
+replacing the dashboard and PDF, so calculation or rendering errors preserve the
+previous report. Use different output folders for reports from different stores:
+each folder contains one `executive-summary.pdf`.
+
+The JSON/Shopify pipeline creates its working files in ignored `data/`; local
+Excel reports live in ignored `output/`. These working folders are deliberately
+excluded from the GitHub package and are recreated when needed.
 
 ## License
 
