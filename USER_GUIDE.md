@@ -71,6 +71,18 @@ the dashboard as `output/executive-summary.pdf`.
 
 ## Input rules
 
+### Test a decision in Scenario lab
+
+Choose your period, SKU, product type or promotion first. Open **Scenario lab**,
+then adjust selling price, volume or unit product cost. The baseline always
+follows your current filters. **Reset assumptions** restores all three changes
+to zero; changing filters keeps your assumptions so you can compare segments.
+
+The final row shows product margin, not profit after variable costs. The required
+volume holds product mix, discount rates and tax treatment constant. It does not
+predict how customers will respond to a price change. Experiments are not saved
+to Excel or included in the existing CSV and PDF downloads.
+
 ### Catalogue
 
 - Use `Type` to mark every row as either `Product` or `Bundle`.
@@ -107,6 +119,21 @@ the dashboard as `output/executive-summary.pdf`.
   yellow recorded allocation against that rule.
 
 ### Orders
+
+The blue helper columns at the right show gross line sales, the first line of
+each order and its payment fee. They calculate automatically. Payment fees are
+rounded once per order, matching the browser dashboard; repeated order IDs do
+not duplicate the fixed fee. Revenue excluding VAT respects each line's
+`Taxable` value.
+
+- Quantities must be positive whole numbers. Stock on hand may be zero but cannot
+  be negative or fractional. Batch quantities and target units must also be
+  positive whole numbers.
+- Each catalogue SKU must be unique across products and bundles. Each promotion
+  code has one rule; duplicate codes are rejected instead of silently replacing
+  earlier entries. Catalogue types must be `Product` or `Bundle`.
+- A line discount cannot be negative or exceed its unit price multiplied by its
+  quantity. Invalid inputs stop the build with an explanation.
 
 - Each row is one SKU in one order. An order containing two products needs two rows
   with the same `Order ID`.

@@ -62,7 +62,8 @@ class TestDashboardTemplate(unittest.TestCase):
         self.assertIn("csvCell(row.name)", self.template)
 
     def test_empty_chart_has_an_explicit_state(self):
-        self.assertIn("No sales in this view", self.template)
+        with open(os.path.join(ROOT, "src", "dashboard_charts.js"), encoding="utf-8") as handle:
+            self.assertIn("No sales in this view", handle.read())
 
 
 if __name__ == "__main__":

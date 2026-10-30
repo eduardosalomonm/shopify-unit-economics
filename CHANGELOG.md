@@ -2,6 +2,23 @@
 
 All notable public changes to Margin Map are recorded here.
 
+## 1.2.0 - 2026-10-31
+
+- Reconciled Excel payment fees with per-order rounding in the pipeline, made
+  line revenue respect Taxable, and improved summary column widths.
+- Added `--as-of YYYY-MM-DD` for reproducible workbook generation.
+
+- Reject fractional counts, negative stock, unknown catalogue types, duplicate
+  bundle/product SKUs and promotion codes, and impossible line discounts before
+  they can silently change imported results.
+
+- Added a browser-only Scenario lab for price, volume and supplier-cost experiments,
+  including the volume needed to preserve product margin and explicit assumptions.
+- Fixed sales charts hiding negative results after variable costs. Losses now sit
+  below a visible zero line; individual points expose their values.
+- Included empty calendar buckets between recorded sales and year labels on monthly charts.
+- Added executable JavaScript checks alongside Python verification in CI.
+
 ## 1.1.0 - 2026-10-23
 
 - Added optional variable costs (fulfilment, shipping charged, payment fees and monthly

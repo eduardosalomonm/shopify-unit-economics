@@ -527,9 +527,9 @@ DASHBOARD_DRAWING_RELS = '''<?xml version="1.0" encoding="UTF-8" standalone="yes
 </Relationships>'''
 
 
-def build_workbook(path=OUTPUT, seed=11):
-    today = datetime.date.today()
-    end_day = today - datetime.timedelta(days=1)
+def build_workbook(path=OUTPUT, seed=11, as_of=None):
+    end_day = as_of or datetime.date.today() - datetime.timedelta(days=1)
+    today = end_day + datetime.timedelta(days=1)
     orders = build_orders(end_day, seed=seed)
 
     gross = sum(scenario_amount(row) for row in orders)
@@ -653,7 +653,13 @@ def build_workbook(path=OUTPUT, seed=11):
                    ["Order ID", "Order date", "SKU", "Product title", "Unit price incl VAT",
                     "Recorded unit price incl VAT", "Quantity", "Discount allocated incl VAT",
                     "Revenue ex VAT", "Recorded discount incl VAT", "Taxable (TRUE/FALSE)",
-                    "Discount code"]]
+                    "Discount code", "Gross line sales", "First line of order", "Payment fee per order"]]
+    order_end = len(orders) + 2
+    order_totals = {}
+    for order in orders:
+        order_totals[order[0]] = order_totals.get(order[0], 0.0) + scenario_amount(order)
+    seen_orders = set()
+    fee_total = 0.0
     for row_index, order in enumerate(orders, start=3):
         order_id, day, sku, title, recorded_price, quantity, recorded_discount, taxable, code = order
         scenario_price = current_price(sku)
@@ -664,7 +670,15 @@ def build_workbook(path=OUTPUT, seed=11):
         discount_formula = ("IF('Settings'!$B$11=\"Scenario\",ROUND(E%d*G%d*"
                             "IFERROR(SUMIF(%s,L%d,%s)/100,0),2),J%d)" %
                             (row_index, row_index, promotion_codes, row_index, promotion_rates, row_index))
-        revenue_formula = "ROUND((E%d*G%d-H%d)/(1+'Settings'!$B$6/100),2)" % (row_index, row_index, row_index)
+        revenue_formula = ('ROUND((E{r}*G{r}-H{r})/IF(OR(K{r}=TRUE,K{r}="TRUE",K{r}="YES",K{r}=1),'
+                           '1+\'Settings\'!$B$6/100,1),2)').format(r=row_index)
+        first = order_id not in seen_orders
+        seen_orders.add(order_id)
+        fee = round((order_totals[order_id] + SHIPPING_CHARGED) * PAYMENT_FEE_PCT / 100 + PAYMENT_FEE_FIXED, 2) if first else 0
+        fee_total += fee
+        first_formula = 'IF(COUNTIF($A$3:A{r},A{r})=1,1,0)'.format(r=row_index)
+        fee_formula = ('IF(N{r}=1,ROUND((SUMIFS($M$3:$M${end},$A$3:$A${end},A{r})+'
+                       '\'Settings\'!$B$13)*\'Settings\'!$B$14/100+\'Settings\'!$B$15,2),0)').format(r=row_index,end=order_end)
         order_sheet.append([
             order_id, day, sku, title,
             Formula(price_formula, scenario_price, CURRENCY_CALCULATED),
@@ -672,6 +686,9 @@ def build_workbook(path=OUTPUT, seed=11):
             Formula(discount_formula, scenario_discount, CURRENCY_CALCULATED),
             Formula(revenue_formula, round((scenario_price * quantity - scenario_discount) / (1 + VAT / 100), 2), CURRENCY_CALCULATED),
             Styled(recorded_discount, CURRENCY_INPUT), taxable, code,
+            Formula('ROUND(E%d*G%d-H%d,2)' % (row_index,row_index,row_index), scenario_amount(order), CURRENCY_CALCULATED),
+            Formula(first_formula, int(first), CALCULATED),
+            Formula(fee_formula, fee, CURRENCY_CALCULATED),
         ])
 
     order_end = len(orders) + 2
@@ -728,12 +745,11 @@ def build_workbook(path=OUTPUT, seed=11):
     # the Settings inputs, so the block updates as soon as a cost is edited.
     advertising = advertising_plan(orders)
     advertising_range = "'Settings'!$B$19:$B$%d" % max(60, 18 + len(advertising))
-    orders_formula = "SUMPRODUCT(1/COUNTIF(%s,%s))" % (order_range, order_range)
+    orders_formula = "SUM('Orders'!$N$3:$N$%d)" % order_end
     # Like the pipeline, shipping ex VAT is rounded to the cent per order.
     shipping_ex_vat = round(round(SHIPPING_CHARGED / (1 + VAT / 100), 2) * order_count, 2)
     fulfilment = round(FULFILMENT_PER_ORDER * order_count, 2)
-    fees = round(PAYMENT_FEE_PCT / 100 * (gross + SHIPPING_CHARGED * order_count)
-                 + PAYMENT_FEE_FIXED * order_count, 2)
+    fees = round(fee_total, 2)
     advertising_total = sum(spend for _month, spend in advertising)
     after = round(total_margin + shipping_ex_vat - fulfilment - fees - advertising_total, 2)
     net_total = sum(round(scenario_amount(order) / (1 + VAT / 100), 2) for order in orders)
@@ -746,8 +762,7 @@ def build_workbook(path=OUTPUT, seed=11):
         12: [Styled("- Fulfilment", CALCULATED),
              Formula("ROUND('Settings'!B12*%s,2)" % orders_formula, fulfilment, CURRENCY_CALCULATED)],
         13: [Styled("- Payment fees", CALCULATED),
-             Formula("ROUND('Settings'!B14/100*(B10+'Settings'!B13*%s)+'Settings'!B15*%s,2)"
-                     % (orders_formula, orders_formula), fees, CURRENCY_CALCULATED)],
+             Formula("SUM('Orders'!$O$3:$O$%d)" % order_end, fees, CURRENCY_CALCULATED)],
         14: [Styled("- Advertising", CALCULATED),
              Formula("SUM(%s)" % advertising_range, advertising_total, CURRENCY_CALCULATED)],
         15: [Styled("After variable costs", PRIMARY),
@@ -889,7 +904,7 @@ def build_workbook(path=OUTPUT, seed=11):
 
     sheets = [
         ("Dashboard", sheet_xml(dashboard, summary_styling,
-                                [20, 48, 22, 28, 18, 16, 4, 14, 14, 14, 14, 14, 14, 14],
+                                [30, 38, 22, 36, 20, 16, 4, 14, 14, 14, 14, 14, 14, 14],
                                 hide_gridlines=True, drawing=True,
                                 hidden_rows=(35, 36, 37)),),
         ("Read me", sheet_xml(readme, readme_styling, [36, 92]),),
@@ -897,7 +912,7 @@ def build_workbook(path=OUTPUT, seed=11):
         ("Catalogue", sheet_xml(catalogue, styling(2), [12, 10, 24, 16, 18, 14, 14, 32, 18, 16, 24, 26, 28, 18]),),
         ("Pricing & promotions", sheet_xml(pricing, pricing_styling, [18, 16, 16, 24, 16]),),
         ("Pricing planner", sheet_xml(planner, planner_styling, [12, 24, 20, 18, 20, 16, 20, 20, 28]),),
-        ("Orders", sheet_xml(order_sheet, styling(2), [14, 14, 10, 24, 20, 26, 12, 24, 18, 24, 18, 16]),),
+        ("Orders", sheet_xml(order_sheet, styling(2), [14, 14, 10, 24, 20, 26, 12, 24, 18, 24, 18, 16, 20, 20, 24]),),
     ]
 
     content_types = (
@@ -973,9 +988,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=11)
     parser.add_argument("--output", default=OUTPUT)
+    parser.add_argument("--as-of", type=datetime.date.fromisoformat,
+                        help="last trading date (YYYY-MM-DD); defaults to yesterday")
     args = parser.parse_args()
 
-    summary = build_workbook(args.output, args.seed)
+    summary = build_workbook(args.output, args.seed, args.as_of)
     print("Workbook written: %s" % os.path.relpath(summary["path"], BASE))
     print("  %s to %s" % (summary["from"], summary["to"]))
     print("  %d order lines · %d orders · %d units · %s %s gross after discounts"

@@ -163,13 +163,19 @@ class TestWorkbook(unittest.TestCase):
             path = sheet_paths(archive)["Dashboard"]
             xml = archive.read(path).decode("utf-8")
             rows = read_sheet(archive, path, shared_strings(archive))
+            order_xml = archive.read(sheet_paths(archive)["Orders"]).decode("utf-8")
         self.assertEqual(rows[14][3], "After variable costs")
         self.assertIn("<f>E10+E11-E12-E13-E14</f>", xml)
-        for setting in ("'Settings'!B12", "'Settings'!B13", "'Settings'!B14", "'Settings'!B15"):
+        for setting in ("'Settings'!B12", "'Settings'!B13"):
             self.assertIn(setting, xml)
+        for setting in ("'Settings'!$B$14", "'Settings'!$B$15"):
+            self.assertIn(setting, order_xml)
         # The cached result shown before Excel recalculates matches its own parts.
         parts = [float(rows[index][4]) for index in range(9, 15)]
         self.assertAlmostEqual(parts[0] + parts[1] - parts[2] - parts[3] - parts[4], parts[5], places=2)
+        from transform import build_rows
+        calculated = build_rows(self.snapshot, self.costs)
+        self.assertAlmostEqual(parts[5], sum(row["resultado_variable"] for row in calculated), places=2)
 
     def test_blank_settings_keep_the_product_margin_dashboard(self):
         self.assertEqual(variable_cost_inputs({}, [["Setting", "Value"]]), (None, 0.0))

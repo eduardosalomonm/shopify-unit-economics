@@ -132,6 +132,14 @@ def truth(value, sheet_name, row_number, field):
                           (sheet_name, row_number, field))
 
 
+def whole_number(value, sheet_name, row_number, field, minimum=0):
+    result = number(value, sheet_name, row_number, field)
+    if result < minimum or not result.is_integer():
+        raise ExcelInputError("%s row %d: %s must be a whole number of at least %d." %
+                              (sheet_name, row_number, field, minimum))
+    return int(result)
+
+
 def contents(value, row_number):
     result = []
     for component in str(value).split("|"):
@@ -234,6 +242,9 @@ def build_inputs(path):
                              "Web price incl VAT", "Batch quantity", "Cost source", "Notes"],
                              optional=("Stock on hand", "Bundle contents", "Declared solo total",
                                        "Claimed saving", "Confirmed (TRUE/FALSE)"))
+        for row in product_rows:
+            if str(row["Type"]).strip().lower() not in ("product", "bundle"):
+                raise ExcelInputError("Catalogue: Type must be Product or Bundle for SKU %s." % row["SKU"])
         product_rows = [row for row in product_rows if str(row["Type"]).strip().lower() == "product"]
         bundle_rows = table(sheets["Catalogue"], "Catalogue", ["Type", "SKU", "Name", "Web price incl VAT",
                             "Bundle contents", "Declared solo total", "Claimed saving",
@@ -261,13 +272,13 @@ def build_inputs(path):
             "coste_fuente": str(row["Cost source"]).strip(),
             "precio_web": positive(row["Web price incl VAT"] if simplified else row["Current web price incl VAT"],
                                     products_sheet, offset, "Web price incl VAT"),
-            "tirada": int(positive(row["Batch quantity"], products_sheet, offset, "Batch quantity")),
+            "tirada": whole_number(row["Batch quantity"], products_sheet, offset, "Batch quantity", 1),
         }
         # Stock on hand is optional: a store that does not track it still gets margins,
         # it just does not get the inventory view. Better than inferring stock from sales.
         if "Stock on hand" in row and str(row["Stock on hand"]).strip():
-            products[sku]["stock"] = int(number(row["Stock on hand"], products_sheet, offset,
-                                                "Stock on hand"))
+            products[sku]["stock"] = whole_number(row["Stock on hand"], products_sheet, offset,
+                                                  "Stock on hand")
         if not products[sku]["nombre"]:
             raise ExcelInputError("%s row %d: Product name is required." % (products_sheet, offset))
 
@@ -288,6 +299,8 @@ def build_inputs(path):
         sku = str(row["SKU"] if simplified else row["Bundle SKU"]).strip()
         if not sku:
             raise ExcelInputError("Catalogue row %d: Bundle SKU is required." % offset)
+        if sku in products or sku in bundles:
+            raise ExcelInputError("Catalogue: duplicate SKU %s. Products and bundles need unique SKUs." % sku)
         bundles[sku] = {
             "sku": sku, "nombre": str(row["Name"] if simplified else row["Bundle name"]).strip(),
             "precio_web": positive(row["Web price incl VAT"] if simplified else row["Bundle price incl VAT"],
@@ -306,6 +319,8 @@ def build_inputs(path):
             code = str(row["Discount code"]).strip()
             if not code:
                 raise ExcelInputError("Promotion rules row %d: Promotion code is required." % offset)
+            if code in promotions:
+                raise ExcelInputError("Promotion rules: duplicate code %s. Use one rule per code." % code)
             rate = number(row["Discount %"], pricing_sheet, offset, "Discount %")
             if rate < 0 or rate >= 100:
                 raise ExcelInputError("Promotion rules row %d: Discount %% must be between 0 and 100." % offset)
@@ -324,8 +339,10 @@ def build_inputs(path):
         if not order_id or not sku:
             raise ExcelInputError("Orders row %d: Order ID and SKU are required." % offset)
         price = positive(row["Unit price incl VAT"], "Orders", offset, "Unit price incl VAT")
-        quantity = int(positive(row["Quantity"], "Orders", offset, "Quantity"))
+        quantity = whole_number(row["Quantity"], "Orders", offset, "Quantity", 1)
         discount = number(row["Discount allocated incl VAT"], "Orders", offset, "Discount allocated incl VAT", True) or 0.0
+        if discount < 0 or discount > round(price * quantity, 2):
+            raise ExcelInputError("Orders row %d: Discount must be between zero and the line's selling value." % offset)
         # Each Excel row becomes its own order object, so the per-order shipping
         # charge goes on the first row of an order only.
         shipping = 0.0
@@ -359,7 +376,7 @@ def build_inputs(path):
         "iva": {"tipo_pct": number(settings["VAT rate (%)"], "Settings", 0, "VAT rate (%)"),
                 "precios_incluyen_iva": True},
         "productos": products, "bundles": bundles, "descuentos": promotions,
-        "objetivo": {"unidades": int(number(settings["Target units"], "Settings", 0, "Target units")),
+        "objetivo": {"unidades": whole_number(settings["Target units"], "Settings", 0, "Target units", 1),
                      "desde": str(settings["Target start"]), "hasta": str(settings["Target end"])},
     }
     if variable_model is not None:

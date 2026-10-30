@@ -47,3 +47,8 @@ jobs:
           ! grep -q "{{" /tmp/excel-dashboard.html
       - name: Run calculation tests
         run: python3 -m unittest discover -s tests -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify browser scenario calculations
+        run: node --test tests/test_*.js

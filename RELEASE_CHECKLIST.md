@@ -11,6 +11,7 @@ The old technical repository and URL names remain stable intentionally.
 ```bash
 python3 src/check_public_release.py --history
 python3 -m unittest discover -s tests -v
+node --test tests/test_*.js
 python3 src/run_excel_dashboard.py --output /tmp/margin-map/index.html
 cmp /tmp/margin-map/index.html docs/index.html
 cmp /tmp/margin-map/executive-summary.pdf docs/executive-summary.pdf
@@ -58,9 +59,16 @@ public contact addition explicitly instead of silently bypassing the guard.
   commands can print store names, order identifiers and catalogue data; keep their
   terminal output private too.
 
-## Current local verification (2026-09-05)
+## Workbook verification
 
-Finite-input, provider-error redaction and release-boundary regression tests pass.
-The synthetic demo rebuilds without credentials. No push or deployment is part
-of this local preparation; remote CI and final anonymous URL remain release-time
-checks, not claims made by this checklist.
+The workbook can be rebuilt for a fixed period using `--as-of YYYY-MM-DD`.
+Verify per-order fees against pipeline totals, change a catalogue price and a
+line's Taxable flag in a disposable copy, and check the affected outputs.
+Open that copy in Excel and confirm both native charts are retained. Never use
+cached values alone as proof that a formula recalculates.
+
+## Release evidence
+
+Use the latest test and build output for each release. This checklist describes
+the required checks, not their current status. Remote CI and anonymous URL
+verification must be checked after publication.

@@ -1,0 +1,19 @@
+<div class="tab-panel" data-panel="scenario" hidden>
+<section class="card">
+<div class="section-head"><h2>Test the next commercial move</h2><span>Scenario lab</span></div>
+<p>What happens to product margin if prices, demand or supplier costs change? Start with the selected sales, then adjust one assumption at a time.</p>
+<div class="scenario-controls">
+<label for="scenario-price">Selling price change (%)<input id="scenario-price" type="number" min="-90" max="200" step="1" value="0"></label>
+<label for="scenario-volume">Sales volume change (%)<input id="scenario-volume" type="number" min="-100" max="500" step="1" value="0"></label>
+<label for="scenario-cost">Unit product cost change (%)<input id="scenario-cost" type="number" min="-100" max="500" step="1" value="0"></label>
+<button id="scenario-reset" type="button" class="export">Reset assumptions</button></div>
+<p id="scenario-error" role="status"></p></section>
+<section class="card" aria-labelledby="scenario-result-title"><div class="section-head"><h2 id="scenario-result-title">Baseline vs scenario</h2><span>Current period and filters</span></div><div id="scenario-result" aria-live="polite"></div></section>
+<section class="card"><h2>How to use this result</h2><p id="scenario-decision"></p>
+<details><summary>Assumptions and calculation scope</summary>
+<p>This is a sensitivity calculation, not a demand forecast. Price changes scale sales after discounts; discount rates, VAT treatment and product mix stay fixed. Volume scales quantities and product costs proportionally. Fractional units represent a modelled mix.</p>
+<p>Product margin = sales excluding VAT minus product costs. Shipping, payment fees, advertising, overhead and refunds are excluded from this experiment, even when variable costs are declared elsewhere. Required volume compares product margin with the filtered baseline, before the volume assumption.</p>
+<p>Experiments stay in this page. They do not change the workbook, recorded sales, CSV exports or executive PDF.</p></details></section></div>
+<style>
+.scenario-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:16px;align-items:end;margin:24px 0 8px}.scenario-controls label{font-size:13px;display:grid;gap:8px}.scenario-controls input{width:100%;font:inherit;font-size:20px;color:var(--ink);padding:12px;border:1px solid var(--rule);border-radius:8px;background:var(--canvas)}.scenario-controls input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}#scenario-error{color:var(--bad)}.scenario-comparison{width:100%;border-collapse:collapse}.scenario-comparison th,.scenario-comparison td{padding:16px 10px;text-align:right;border-bottom:1px solid var(--rule)}.scenario-comparison th:first-child,.scenario-comparison td:first-child{text-align:left}.scenario-comparison th{color:var(--muted);font-weight:500}.scenario-comparison .result-row{font-weight:700;background:var(--accent-soft)}#scenario-decision{font-size:18px;line-height:1.6;max-width:65ch}[data-panel="scenario"] p{line-height:1.65;max-width:80ch}[data-panel="scenario"] summary{cursor:pointer;color:var(--accent);padding:12px 0}@media(max-width:650px){.scenario-controls{grid-template-columns:1fr}.scenario-comparison th,.scenario-comparison td{padding:12px 4px;font-size:12px}}
+</style>

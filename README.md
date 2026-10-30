@@ -10,7 +10,7 @@ contribution margin by SKU, bundle-price checks and a static dashboard. It was
 first built for a Shopify e-commerce store, then adapted into this
 credential-free public version so anyone can explore the workflow safely.
 
-Current public release: **v1.1.0**. See [CHANGELOG.md](CHANGELOG.md).
+Version: **v1.2.0**. See [CHANGELOG.md](CHANGELOG.md).
 
 The project is designed for two use cases:
 
@@ -25,6 +25,20 @@ The project is designed for two use cases:
 **[Contributing →](CONTRIBUTING.md)**
 
 ![Margin Map dashboard using the synthetic Luma Vale store](assets/dashboard-overview.png)
+
+## Explore a business decision
+
+Open **Scenario lab** in the dashboard, choose a period or SKU, and test changes
+to selling price, sales volume and product cost. The comparison shows the effect
+on product margin and the volume needed to preserve the baseline margin. This
+is a sensitivity model with explicit assumptions, not a demand forecast. It runs
+entirely in your browser and leaves the workbook and historical exports unchanged.
+
+For a quick portfolio walkthrough: inspect Overview, isolate a SKU in Product
+economics, then test a 10% price reduction in Scenario lab. Explain the extra
+volume required to recover margin before recommending a promotion.
+
+![Scenario lab comparing a price change with the selected sales baseline](assets/scenario-lab.png)
 
 ## Excel workflow
 
@@ -61,6 +75,11 @@ trading window forward to today, with:
 python3 src/make_demo_workbook.py
 ```
 
+To rebuild the same trading window during a release, use a fixed last trading
+date: `python3 src/make_demo_workbook.py --as-of 2026-10-22`. Omitting `--as-of`
+keeps the rolling demo behaviour. Rebuilding replaces the starter workbook, so
+save edited business workbooks separately before running this command.
+
 The dashboard does not publish when integrity checks fail. It detects unknown SKUs,
 invalid bundle claims, discount-code allocations that do not match their declared
 rules, and inconsistent VAT treatment. Price-history mismatches are also checked
@@ -86,6 +105,26 @@ Python 3.8+ and the standard library are enough for the public path. Run
 the checks and normal publication must fail.
 
 ## Design principles
+
+### Engineering walkthrough
+
+The public workflow has four boundaries: an editable workbook is parsed and
+validated, order lines are transformed into SQLite, integrity checks gate
+publication, and a static HTML dashboard plus PDF is generated. The HTML embeds
+its data and JavaScript, so reviewers can explore it offline without a server,
+an account or a package installation.
+
+Python handles extraction, validation and reproducible publication. SQLite keeps
+line-level calculations queryable. JavaScript handles filtering, charts and
+scenario arithmetic in the browser. Excel supplies an accessible editing surface
+and a formula-driven companion dashboard. GitHub Actions verifies calculations,
+privacy boundaries and reproducible builds.
+
+The deliberate trade-off is a portable analytical tool rather than a hosted
+multi-user service. Browser scenarios are temporary, data refresh is explicit,
+and Shopify imports require reconciliation before operational use. The demo
+revenue is synthetic; the portfolio evidence is the working application and its
+tested engineering, not a claim of commercial uplift.
 
 ### Calculation scope
 

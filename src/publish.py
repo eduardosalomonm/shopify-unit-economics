@@ -456,6 +456,15 @@ def main():
         return 1
     with open(TEMPLATE, "r", encoding="utf-8") as handle:
         page = handle.read()
+    with open(os.path.join(BASE, "src", "scenario_lab.html"), encoding="utf-8") as handle:
+        page = page.replace("<footer>", handle.read() + "<footer>")
+    page = page.replace("</nav>", '<button type="button" role="tab" id="tab-scenario" '
+                        'aria-controls="panel-scenario" aria-selected="false" '
+                        'data-tab="scenario">Scenario lab</button></nav>', 1)
+    with open(os.path.join(BASE, "src", "scenario_lab.js"), encoding="utf-8") as handle:
+        page = page.replace("{{SCENARIO_SCRIPT}}", handle.read())
+    with open(os.path.join(BASE, "src", "dashboard_charts.js"), encoding="utf-8") as handle:
+        page = page.replace("{{CHART_SCRIPT}}", handle.read())
     replacements = {
         "{{APP_VERSION}}": html.escape(version()),
         "{{BRAND}}": html.escape(costs.get("meta", {}).get("marca", "Store")),

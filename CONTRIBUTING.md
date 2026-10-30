@@ -19,10 +19,14 @@ customer data or private dashboards.
    ```bash
    python3 src/check_public_release.py --history
    python3 -m unittest discover -s tests -v
+   node --test tests/test_*.js
    ```
 
 4. If you change an input column, update `USER_GUIDE.md`, its workbook generator,
    parser and tests together.
+
+Node.js 22+ is used only for browser calculation tests. Running the dashboard and
+Excel workflow still requires only Python and its standard library.
 
 ## Project conventions
 
