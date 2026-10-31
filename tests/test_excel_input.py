@@ -131,7 +131,7 @@ class TestStarterWorkbook(unittest.TestCase):
         self.assertEqual(sheets[0].attrib["name"], "Dashboard")
         values = ["".join(cell.itertext()) for cell in dashboard.findall(".//x:c", namespace)]
         self.assertIn("Online dashboard", values)
-        self.assertIn("https://eduardosalomonm.github.io/shopify-unit-economics/", values)
+        self.assertIn("https://marginmap.eilvi.com/", values)
 
     def test_non_positive_prices_explain_how_to_recover(self):
         with self.assertRaisesRegex(ExcelInputError, "Pricing planner"):

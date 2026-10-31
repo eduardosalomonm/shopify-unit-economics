@@ -19,7 +19,7 @@ The project is designed for two use cases:
 | **Excel workflow** | Users who want to edit inputs and generate a dashboard with one click | Included synthetic `.xlsx` workbook |
 | **Private Shopify mode** | A store owner who wants to pull live orders | Local credentials and private cost model |
 
-**[Live demo →](https://eduardosalomonm.github.io/shopify-unit-economics/)** ·
+**[Live demo →](https://marginmap.eilvi.com/)** ·
 **[60-second setup →](TLDR.README/README.md)** ·
 **[User guide →](USER_GUIDE.md)** ·
 **[Contributing →](CONTRIBUTING.md)**
@@ -60,7 +60,7 @@ The workbook starts on `Dashboard`, a formula-driven Excel companion with native
 charts for sales by SKU and progress against the gross-sales benchmark. It shows
 scenario sales, benchmark progress, price health and product economics immediately,
 and explains that the polished interactive experience is
-the [published online dashboard](https://eduardosalomonm.github.io/shopify-unit-economics/).
+the [published online dashboard](https://marginmap.eilvi.com/).
 In the default `Scenario` mode, yellow catalogue prices
 and promotion rates update the blue unit-price and discount cells in `Orders`, so
 the dashboard reflects price experiments after the workbook is saved. Switch

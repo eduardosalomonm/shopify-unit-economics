@@ -716,7 +716,7 @@ def build_workbook(path=OUTPUT, seed=11, as_of=None):
         ["About this workbook"],
         ["Built first for a Shopify e-commerce store, then adapted as a credential-free public demo."],
         ["This tab updates immediately in Excel. The polished interactive dashboard is published online."],
-        [Styled("Online dashboard", PRIMARY), "https://eduardosalomonm.github.io/shopify-unit-economics/"],
+        [Styled("Online dashboard", PRIMARY), "https://marginmap.eilvi.com/"],
         [""],
         ["Live commercial picture", "Value"],
         ["Gross sales", Formula(gross_formula, round(gross, 2), PRIMARY_CURRENCY)],
